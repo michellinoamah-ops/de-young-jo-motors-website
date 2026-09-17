@@ -1,11 +1,13 @@
 import { loadCarDetails, loadCars, formatNaira } from "./cars.js";
 import { waLink } from "./firebase-config.js";
 import { wireCartButtons } from "./cart.js";
+import { loadCarReviews, wireReviewForm } from "./reviews.js";
 
 const params = new URLSearchParams(window.location.search);
 const id = params.get("id");
 const root = document.getElementById("carDetailsRoot");
 const notFound = document.getElementById("carNotFound");
+const reviewsSection = document.getElementById("carReviewsSection");
 
 async function init() {
   if (!id) { showNotFound(); return; }
@@ -23,6 +25,7 @@ async function init() {
 
 function showNotFound() {
   if (root) root.classList.add("hidden");
+  if (reviewsSection) reviewsSection.classList.add("hidden");
   if (notFound) notFound.classList.remove("hidden");
 }
 
@@ -93,6 +96,10 @@ function render(car) {
 
   // Related vehicles of the same type
   loadCars("relatedCarsGrid", { type: car.type, take: 3 });
+
+  // Reviews & star ratings for this specific vehicle
+  loadCarReviews(car.id, "reviewsList", "reviewSummary");
+  wireReviewForm(car.id, "reviewForm", "reviewStatus");
 }
 
 init();

@@ -62,6 +62,26 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
+    // ---------------- Blog comments ----------------
+    // Anyone can post one; it only becomes publicly visible once an admin
+    // sets status to "approved" from Admin -> Reviews & Comments.
+    match /blogComments/{commentId} {
+      allow create: if request.resource.data.keys().hasAll(['postId','name','message']) &&
+                      request.resource.data.status == 'pending';
+      allow read: if resource.data.status == 'approved' || isAdmin();
+      allow update, delete: if isAdmin();
+    }
+
+    // ---------------- Car reviews & star ratings ----------------
+    match /carReviews/{reviewId} {
+      allow create: if request.resource.data.keys().hasAll(['carId','name','rating','message']) &&
+                      request.resource.data.status == 'pending' &&
+                      request.resource.data.rating is number &&
+                      request.resource.data.rating >= 1 && request.resource.data.rating <= 5;
+      allow read: if resource.data.status == 'approved' || isAdmin();
+      allow update, delete: if isAdmin();
+    }
+
     // ---------------- Popups / offers ----------------
     // Publicly readable (the site needs to know which are active);
     // only an admin can create, edit, enable/disable or delete one.
@@ -77,3 +97,4 @@ service cloud.firestore {
     }
   }
 }
+

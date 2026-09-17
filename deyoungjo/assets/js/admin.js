@@ -9,7 +9,7 @@ import { app, db, storage, auth } from "./firebase-config.js";
 import { requireAdmin, adminLogout } from "./admin-auth.js";
 import {
   collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs,
-  query, orderBy, serverTimestamp, onSnapshot
+  query, where, orderBy, limit, serverTimestamp, onSnapshot, Timestamp
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 import {
   ref, uploadBytes, getDownloadURL, deleteObject
@@ -24,6 +24,12 @@ import {
 /* ------------------------------------------------------------ helpers */
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+
+// Cheap in-memory lookups so the Reviews & Comments panel can show "2019
+// Toyota Camry" or a post's title instead of a raw Firestore ID. Filled in
+// by initCars()/initBlog()'s own listeners, which are already running.
+const carsMap = {};
+const postsMap = {};
 
 function toast(msg) {
   const t = document.createElement("div");
@@ -40,6 +46,24 @@ function fmtDate(ts) {
   } catch { return ""; }
 }
 
+// For pre-filling <input type="date"> with an existing Firestore Timestamp,
+// or today's date when there isn't one yet.
+function toDateInputValue(ts) {
+  try {
+    const d = ts?.toDate ? ts.toDate() : (ts ? new Date(ts) : new Date());
+    return d.toISOString().slice(0, 10);
+  } catch {
+    return new Date().toISOString().slice(0, 10);
+  }
+}
+
+// Turns the value of an <input type="date"> ("YYYY-MM-DD") into a Firestore
+// Timestamp at local midnight, so backdated posts sort correctly.
+function dateInputToTimestamp(value) {
+  const d = value ? new Date(value + "T00:00:00") : new Date();
+  return Timestamp.fromDate(d);
+}
+
 function slugify(s) {
   return (s || "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
@@ -54,10 +78,10 @@ async function uploadFiles(files, pathPrefix) {
   return urls;
 }
 
-function openModal(html) {
+function openModal(html, wide = false) {
   const overlay = document.createElement("div");
   overlay.className = "admin-modal-overlay";
-  overlay.innerHTML = `<div class="admin-modal">${html}</div>`;
+  overlay.innerHTML = `<div class="admin-modal${wide ? " admin-modal-wide" : ""}">${html}</div>`;
   $("#modalMount").appendChild(overlay);
   overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
   return overlay;
@@ -72,9 +96,11 @@ requireAdmin((user) => {
   initCars();
   initBlog();
   initEnquiries();
+  initReviewsComments();
   initAffiliates();
   initPopups();
   initSettings();
+  initNotifications();
 });
 
 $("#logoutBtn").addEventListener("click", adminLogout);
@@ -84,7 +110,7 @@ function initSidebar() {
   const sections = $$(".admin-section");
   const titleMap = {
     overview: "Overview", cars: "Cars & Rentals", blog: "Blog",
-    enquiries: "Enquiries", affiliates: "Affiliate Applications",
+    enquiries: "Enquiries", reviews: "Reviews & Comments", affiliates: "Affiliate Applications",
     popups: "Popups & Offers", settings: "Settings"
   };
   function show(name) {
@@ -209,6 +235,7 @@ function initCars() {
   onSnapshot(query(collection(db, "cars"), orderBy("createdAt", "desc")), snap => {
     const rows = [];
     snap.forEach(d => rows.push({ id: d.id, ...d.data() }));
+    rows.forEach(c => carsMap[c.id] = `${c.year||''} ${c.brand||''} ${c.model||''}`.trim());
     $("#carsTableBody").innerHTML = rows.length ? rows.map(c => `
       <tr>
         <td><img class="thumb" src="${(c.images&&c.images[0])||''}" onerror="this.style.opacity=0"></td>
@@ -302,12 +329,41 @@ function postFormHTML(post = {}) {
         <div class="form-field"><label>Category</label><input name="category" value="${post.category||'Buying Guide'}"></div>
       </div>
       <div class="form-field">
+        <label>Publish date</label>
+        <input type="date" name="publishDate" value="${toDateInputValue(post.createdAt)}">
+        <p class="form-note">Sets the date shown on the article and used to order the blog. Set this to a past date to backdate a post.</p>
+      </div>
+      <div class="form-field">
         <label>Cover image</label>
         <div class="image-input-list">${post.coverImage?`<img src="${post.coverImage}">`:""}</div>
         <input type="file" name="cover" accept="image/*">
       </div>
       <div class="form-field"><label>Excerpt (short summary)</label><textarea name="excerpt" style="min-height:70px;">${post.excerpt||''}</textarea></div>
-      <div class="form-field"><label>Content (basic HTML allowed, e.g. &lt;p&gt;, &lt;h3&gt;, &lt;ul&gt;)</label><textarea name="content" style="min-height:220px;">${post.content||''}</textarea></div>
+      <div class="form-field">
+        <label>Content</label>
+        <div id="postQuillToolbar">
+          <span class="ql-formats">
+            <select class="ql-header"><option value="2"></option><option value="3"></option><option selected></option></select>
+          </span>
+          <span class="ql-formats">
+            <button class="ql-bold"></button><button class="ql-italic"></button><button class="ql-underline"></button>
+          </span>
+          <span class="ql-formats">
+            <select class="ql-color"></select><select class="ql-background"></select>
+          </span>
+          <span class="ql-formats">
+            <select class="ql-align"></select>
+          </span>
+          <span class="ql-formats">
+            <button class="ql-list" value="ordered"></button><button class="ql-list" value="bullet"></button><button class="ql-blockquote"></button>
+          </span>
+          <span class="ql-formats">
+            <button class="ql-link"></button><button class="ql-image"></button><button class="ql-clean"></button>
+          </span>
+        </div>
+        <div id="postQuillEditor"></div>
+        <textarea name="content" id="postContentHidden" style="display:none;">${post.content||''}</textarea>
+      </div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
         <label class="switch"><input type="checkbox" name="published" ${post.published!==false?"checked":""}><span class="slider"></span></label>
         <label style="margin:0;">Published (visible on the site)</label>
@@ -322,10 +378,11 @@ function initBlog() {
   onSnapshot(query(collection(db, "blogPosts"), orderBy("createdAt", "desc")), snap => {
     const rows = [];
     snap.forEach(d => rows.push({ id: d.id, ...d.data() }));
+    rows.forEach(p => postsMap[p.slug] = p.title);
     $("#postsTableBody").innerHTML = rows.length ? rows.map(p => `
       <tr>
         <td><img class="thumb" src="${p.coverImage||''}" onerror="this.style.opacity=0"></td>
-        <td>${p.title}</td>
+        <td>${p.title}<br><span class="muted" style="font-size:.78rem;">${fmtDate(p.createdAt)}</span></td>
         <td>${p.category||''}</td>
         <td><label class="switch"><input type="checkbox" data-pub="${p.id}" ${p.published!==false?'checked':''}><span class="slider"></span></label></td>
         <td>${fmtDate(p.createdAt)}</td>
@@ -349,11 +406,23 @@ function initBlog() {
 }
 
 function openPostModal(post) {
-  const overlay = openModal(postFormHTML(post || {}));
+  const overlay = openModal(postFormHTML(post || {}), true);
   $(".admin-modal-close", overlay).addEventListener("click", () => closeModal(overlay));
   const form = $("#postForm", overlay);
+
+  // Quill rich-text editor: bold, headings, colour, alignment, lists, links.
+  // The hidden textarea keeps the current HTML in sync so FormData can read it.
+  const hiddenContent = $("#postContentHidden", overlay);
+  const quill = new Quill(overlay.querySelector("#postQuillEditor"), {
+    theme: "snow",
+    modules: { toolbar: overlay.querySelector("#postQuillToolbar") },
+    placeholder: "Write the article here…",
+  });
+  quill.root.innerHTML = hiddenContent.value || "";
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    hiddenContent.value = quill.root.innerHTML;
     const status = $("#postFormStatus", overlay);
     const btn = form.querySelector("button[type=submit]");
     btn.disabled = true; btn.textContent = "Saving…";
@@ -364,10 +433,10 @@ function openPostModal(post) {
         title, slug: slugify(fd.get("slug") || title),
         category: fd.get("category"), excerpt: fd.get("excerpt"),
         content: fd.get("content"), published: fd.get("published") === "on",
+        createdAt: dateInputToTimestamp(fd.get("publishDate")),
       };
       let id = post && post.id;
       if (!id) {
-        payload.createdAt = serverTimestamp();
         const docRef = await addDoc(collection(db, "blogPosts"), payload);
         id = docRef.id;
       }
@@ -391,8 +460,100 @@ function openPostModal(post) {
 }
 
 /* =====================================================================
-   ENQUIRIES  (reply goes out via the admin's own email app — always
-   works — or via EmailJS one-click send if configured in Settings)
+   REVIEWS & COMMENTS  (blog comments + car reviews, same moderation flow:
+   Approve makes it public, Reject hides it but keeps the record, Delete
+   removes it for good)
+===================================================================== */
+function statusPill(status) {
+  if (status === "approved") return `<span class="pill pill-green">Approved</span>`;
+  if (status === "rejected") return `<span class="pill pill-red">Rejected</span>`;
+  return `<span class="pill pill-gold">Pending</span>`;
+}
+
+function sortModeration(items) {
+  const rank = { pending: 0, approved: 1, rejected: 2 };
+  return items.sort((a, b) => {
+    const r = (rank[a.status] ?? 0) - (rank[b.status] ?? 0);
+    if (r !== 0) return r;
+    return (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0);
+  });
+}
+
+function moderationActions(collectionName, id) {
+  return `
+    <div class="row-actions">
+      <button class="btn btn-sm btn-gold" data-approve="${collectionName}:${id}">Approve</button>
+      <button class="btn btn-sm btn-outline" data-reject="${collectionName}:${id}">Reject</button>
+      <button class="btn btn-sm btn-danger" data-delmod="${collectionName}:${id}">Delete</button>
+    </div>`;
+}
+
+function wireModerationButtons(root) {
+  root.querySelectorAll("[data-approve]").forEach(b => b.addEventListener("click", async () => {
+    const [col, id] = b.dataset.approve.split(":");
+    await updateDoc(doc(db, col, id), { status: "approved" });
+    toast("Approved and now visible on the site.");
+  }));
+  root.querySelectorAll("[data-reject]").forEach(b => b.addEventListener("click", async () => {
+    const [col, id] = b.dataset.reject.split(":");
+    await updateDoc(doc(db, col, id), { status: "rejected" });
+    toast("Rejected. It's hidden from the site but kept on record.");
+  }));
+  root.querySelectorAll("[data-delmod]").forEach(b => b.addEventListener("click", async () => {
+    if (!confirm("Delete this permanently?")) return;
+    const [col, id] = b.dataset.delmod.split(":");
+    await deleteDoc(doc(db, col, id));
+    toast("Deleted.");
+  }));
+}
+
+function initReviewsComments() {
+  const commentsEl = $("#commentsModList");
+  const reviewsEl = $("#reviewsModList");
+
+  onSnapshot(query(collection(db, "blogComments"), orderBy("createdAt", "desc")), snap => {
+    let items = [];
+    snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+    items = sortModeration(items);
+    commentsEl.innerHTML = items.length ? items.map(c => `
+      <div class="enquiry-item ${c.status === 'pending' ? 'unread' : ''}">
+        <h4>${c.name || "Anonymous"} ${statusPill(c.status)}</h4>
+        <p class="muted" style="margin:0 0 6px;">On &ldquo;${postsMap[c.postId] || c.postId}&rdquo; &middot; ${fmtDate(c.createdAt)}</p>
+        <p style="margin:0 0 10px;">${c.message || ""}</p>
+        ${moderationActions("blogComments", c.id)}
+      </div>`).join("") : `<p class="empty-state">No blog comments yet.</p>`;
+    wireModerationButtons(commentsEl);
+    updatePendingStat();
+  });
+
+  onSnapshot(query(collection(db, "carReviews"), orderBy("createdAt", "desc")), snap => {
+    let items = [];
+    snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+    items = sortModeration(items);
+    reviewsEl.innerHTML = items.length ? items.map(r => `
+      <div class="enquiry-item ${r.status === 'pending' ? 'unread' : ''}">
+        <h4>${r.name || "Anonymous"} ${statusPill(r.status)}</h4>
+        <p class="stars-display" style="margin:0 0 4px;">${"&#9733;".repeat(Number(r.rating)||0)}${"&#9734;".repeat(5-(Number(r.rating)||0))}</p>
+        <p class="muted" style="margin:0 0 6px;">On ${carsMap[r.carId] || r.carId} &middot; ${fmtDate(r.createdAt)}</p>
+        <p style="margin:0 0 10px;">${r.message || ""}</p>
+        ${moderationActions("carReviews", r.id)}
+      </div>`).join("") : `<p class="empty-state">No car reviews yet.</p>`;
+    wireModerationButtons(reviewsEl);
+    updatePendingStat();
+  });
+}
+
+let pendingCommentsCount = 0, pendingReviewsCount = 0;
+function updatePendingStat() {
+  pendingCommentsCount = $$(".enquiry-item.unread", $("#commentsModList")).length;
+  pendingReviewsCount = $$(".enquiry-item.unread", $("#reviewsModList")).length;
+  const el = $("#statPendingReviews");
+  if (el) el.textContent = pendingCommentsCount + pendingReviewsCount;
+}
+
+/* =====================================================================
+   ENQUIRIES  (reply goes out via the admin's own email app, always
+   works, or via EmailJS one-click send if configured in Settings)
 ===================================================================== */
 function initEnquiries() {
   onSnapshot(query(collection(db, "enquiries"), orderBy("createdAt", "desc")), snap => {
@@ -613,6 +774,77 @@ function openPopupModal(p) {
 /* =====================================================================
    SETTINGS
 ===================================================================== */
+/* =====================================================================
+   DESKTOP NOTIFICATIONS  (bell button in the topbar)
+   Works while this dashboard is open in a browser tab, even a background
+   one. True "notify even with the browser fully closed" push needs a
+   server component (Firebase Cloud Functions), which isn't set up here.
+   See the README for that optional upgrade path.
+===================================================================== */
+const NOTIFY_KEY = "dyj_admin_notify";
+
+function notifyUser(title, body) {
+  toast(`${title}: ${body}`);
+  if (localStorage.getItem(NOTIFY_KEY) === "1" && typeof Notification !== "undefined" && Notification.permission === "granted") {
+    try { new Notification(title, { body, icon: "assets/img/logo.png" }); } catch (e) { console.warn(e); }
+  }
+}
+
+function setNotifyUI(on) {
+  $("#notifyLabel").textContent = on ? "Notifications: On" : "Notifications: Off";
+  $("#notifyIcon").textContent = on ? "\u{1F514}" : "\u{1F515}";
+  $("#notifyToggleBtn").classList.toggle("added", on);
+}
+
+async function initNotifications() {
+  const on = localStorage.getItem(NOTIFY_KEY) === "1" && typeof Notification !== "undefined" && Notification.permission === "granted";
+  setNotifyUI(on);
+
+  $("#notifyToggleBtn").addEventListener("click", async () => {
+    const currentlyOn = localStorage.getItem(NOTIFY_KEY) === "1";
+    if (currentlyOn) {
+      localStorage.setItem(NOTIFY_KEY, "0");
+      setNotifyUI(false);
+      toast("Desktop notifications turned off.");
+      return;
+    }
+    if (typeof Notification === "undefined") {
+      toast("This browser doesn't support desktop notifications.");
+      return;
+    }
+    const permission = Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
+    if (permission === "granted") {
+      localStorage.setItem(NOTIFY_KEY, "1");
+      setNotifyUI(true);
+      toast("Desktop notifications turned on.");
+    } else {
+      toast("Notifications are blocked in this browser's settings. Allow them for this site to turn this on.");
+    }
+  });
+
+  // Watch each collection for genuinely new documents. The first snapshot
+  // of each listener is the existing backlog, not a "new" event, so it's
+  // skipped deliberately.
+  function watchNew(collectionName, extraClause, describe) {
+    const clauses = [orderBy("createdAt", "desc"), limit(20)];
+    const q = extraClause
+      ? query(collection(db, collectionName), extraClause, ...clauses)
+      : query(collection(db, collectionName), ...clauses);
+    let first = true;
+    onSnapshot(q, snap => {
+      if (first) { first = false; return; }
+      snap.docChanges().forEach(change => {
+        if (change.type === "added") notifyUser("De Young Jo Motors admin", describe(change.doc.data()));
+      });
+    });
+  }
+
+  watchNew("enquiries", null, d => `New enquiry from ${d.name || "a visitor"}.`);
+  watchNew("affiliateApplications", null, d => `New affiliate application from ${d.fullName || "someone"}.`);
+  watchNew("blogComments", where("status", "==", "pending"), d => `New blog comment awaiting approval from ${d.name || "someone"}.`);
+  watchNew("carReviews", where("status", "==", "pending"), d => `New car review awaiting approval from ${d.name || "someone"}.`);
+}
+
 async function initSettings() {
   const settingsForm = $("#settingsForm");
   const emailjsForm = $("#emailjsForm");

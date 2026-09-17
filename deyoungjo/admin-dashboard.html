@@ -7,9 +7,11 @@
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" type="image/png" href="assets/img/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/admin.css">
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
 </head>
 <body>
 <div class="admin-shell">
@@ -24,6 +26,7 @@
       <button data-section="cars"><span class="icon">&#128663;</span> Cars &amp; Rentals</button>
       <button data-section="blog"><span class="icon">&#128221;</span> Blog</button>
       <button data-section="enquiries"><span class="icon">&#9993;</span> Enquiries</button>
+      <button data-section="reviews"><span class="icon">&#11088;</span> Reviews &amp; Comments</button>
       <button data-section="affiliates"><span class="icon">&#129309;</span> Affiliate Applications</button>
       <button data-section="popups"><span class="icon">&#128227;</span> Popups &amp; Offers</button>
       <button data-section="settings"><span class="icon">&#9881;</span> Settings</button>
@@ -41,6 +44,9 @@
         <button class="admin-burger" id="adminBurger">&#9776;</button>
         <h2 id="sectionTitle">Overview</h2>
       </div>
+      <button id="notifyToggleBtn" class="btn btn-sm btn-outline" title="Turn desktop notifications on or off" style="display:flex;align-items:center;gap:8px;">
+        <span id="notifyIcon">&#128276;</span> <span id="notifyLabel">Notifications: Off</span>
+      </button>
     </div>
 
     <div class="admin-content">
@@ -52,6 +58,7 @@
           <div class="stat-card"><div class="n" id="statRentals">–</div><div class="l">Rental vehicles</div></div>
           <div class="stat-card"><div class="n" id="statEnquiries">–</div><div class="l">New enquiries</div></div>
           <div class="stat-card"><div class="n" id="statAffiliates">–</div><div class="l">Affiliate applications</div></div>
+          <div class="stat-card"><div class="n" id="statPendingReviews">–</div><div class="l">Pending reviews &amp; comments</div></div>
         </div>
         <div class="panel">
           <div class="panel-head"><h3>Quick actions</h3></div>
@@ -105,6 +112,18 @@
         <div id="enquiriesList"><p class="empty-state">Loading…</p></div>
       </section>
 
+      <!-- REVIEWS & COMMENTS -->
+      <section id="sec-reviews" class="admin-section hidden">
+        <div class="panel">
+          <div class="panel-head"><h3>Blog comments</h3></div>
+          <div id="commentsModList"><p class="empty-state">Loading…</p></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>Car reviews</h3></div>
+          <div id="reviewsModList"><p class="empty-state">Loading…</p></div>
+        </div>
+      </section>
+
       <!-- AFFILIATES -->
       <section id="sec-affiliates" class="admin-section hidden">
         <div class="panel-head" style="margin-bottom:16px;"><h3>Affiliate applications</h3></div>
@@ -137,6 +156,10 @@
 
       <!-- SETTINGS -->
       <section id="sec-settings" class="admin-section hidden">
+        <div class="panel">
+          <div class="panel-head"><h3>Desktop notifications</h3></div>
+          <p class="muted">Use the bell button at the top of this dashboard to turn notifications on or off. When on, and while this dashboard is open in a browser tab (even in the background), you'll get a pop-up alert for new enquiries, new affiliate applications, and new reviews or comments waiting for approval.</p>
+        </div>
         <div class="panel">
           <div class="panel-head"><h3>Site information</h3></div>
           <form id="settingsForm">

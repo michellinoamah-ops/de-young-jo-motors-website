@@ -250,7 +250,7 @@ input,textarea,select{font-family:inherit;font-size:1rem;}
 
 /* ---------- Footer ---------- */
 .footer{background:var(--ink);color:var(--steel-light);padding:70px 0 26px;}
-.footer-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1.1fr;gap:40px;margin-bottom:50px;}
+.footer-grid{display:grid;grid-template-columns:1.2fr .9fr .9fr 1fr 1.1fr;gap:32px;margin-bottom:50px;}
 .footer-logo{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
 .footer-logo img{height:38px;}
 .footer h4{color:#fff;font-size:1rem;margin-bottom:16px;}
@@ -259,6 +259,7 @@ input,textarea,select{font-family:inherit;font-size:1rem;}
 .footer-bottom{border-top:1px solid var(--line-dark);padding-top:22px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;font-size:.82rem;}
 .footer-social{display:flex;gap:12px;}
 .footer-social a{border:1px solid var(--line-dark);width:36px;height:36px;display:flex;align-items:center;justify-content:center;padding:0;}
+@media (max-width:1100px){.footer-grid{grid-template-columns:1fr 1fr 1fr;}}
 @media (max-width:900px){.footer-grid{grid-template-columns:1fr 1fr;}}
 @media (max-width:560px){.footer-grid{grid-template-columns:1fr;}}
 
@@ -332,6 +333,72 @@ input,textarea,select{font-family:inherit;font-size:1rem;}
 .trust-row{display:flex;flex-wrap:wrap;gap:24px;align-items:center;justify-content:center;padding:22px 0;}
 .trust-row .item{display:flex;align-items:center;gap:8px;font-size:.86rem;font-weight:600;color:var(--steel);}
 .trust-row .item .dot{width:6px;height:6px;background:var(--gold);border-radius:50%;}
+
+/* ---------- Office / address cards ---------- */
+.office-card{background:var(--paper);border:1px solid var(--line);box-shadow:var(--card-shadow);padding:26px 24px;}
+.office-card .office-label{display:inline-block;background:var(--ink);color:var(--gold-light);font-size:.72rem;font-weight:700;letter-spacing:.03em;padding:4px 11px;margin-bottom:14px;}
+.office-card h3{font-size:1.15rem;display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.office-card address{font-style:normal;color:var(--steel);line-height:1.6;margin-bottom:16px;}
+.office-card a.directions{font-size:.86rem;font-weight:700;color:var(--gold-dim);display:inline-flex;align-items:center;gap:6px;}
+.office-card a.directions:hover{color:var(--gold);}
+
+.rc-badge{
+  display:inline-flex;align-items:center;gap:8px;background:var(--paper);border:1px solid var(--line);
+  padding:8px 16px;font-size:.82rem;font-weight:700;color:var(--steel);
+}
+.rc-badge .tick{color:var(--success);font-size:1rem;}
+.rc-badge.on-ink{background:var(--ink-soft);border-color:var(--line-dark);color:var(--steel-light);}
+
+.footer-address{font-style:normal;color:var(--steel-light);font-size:.88rem;line-height:1.6;}
+.footer-address strong{display:block;color:#fff;font-size:.82rem;margin-top:10px;}
+.footer-address strong:first-child{margin-top:0;}
+
+/* ---------- Blog: modern editorial listing (no cards) ---------- */
+.blog-featured{display:grid;grid-template-columns:1.15fr 1fr;gap:44px;align-items:center;margin-bottom:60px;padding-bottom:50px;border-bottom:1px solid var(--line);}
+.blog-featured img{width:100%;aspect-ratio:4/3;object-fit:cover;}
+.blog-featured h2{font-size:clamp(1.6rem,3vw,2.2rem);}
+.blog-featured .excerpt{font-size:1.05rem;}
+@media (max-width:820px){.blog-featured{grid-template-columns:1fr;gap:22px;}}
+
+.post-meta{font-size:.78rem;font-weight:700;letter-spacing:.03em;color:var(--gold-dim);text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.post-meta .sep{color:var(--line);font-weight:400;}
+
+.blog-list{display:flex;flex-direction:column;}
+.blog-row{display:grid;grid-template-columns:220px 1fr;gap:28px;padding:32px 0;border-bottom:1px solid var(--line);}
+.blog-row img{width:220px;height:150px;object-fit:cover;flex-shrink:0;}
+.blog-row h3{font-family:var(--font-display);font-size:1.35rem;margin-bottom:8px;}
+.blog-row h3 a:hover{color:var(--gold-dim);}
+.blog-row p{margin-bottom:10px;}
+.blog-row .read-more{font-size:.86rem;font-weight:700;color:var(--gold-dim);}
+@media (max-width:700px){.blog-row{grid-template-columns:1fr;}.blog-row img{width:100%;height:200px;}}
+
+.blog-cats{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:40px;}
+.blog-cats button{background:var(--paper);border:1px solid var(--line);padding:8px 16px;font-size:.85rem;font-weight:600;color:var(--steel);}
+.blog-cats button.active{background:var(--ink);color:var(--gold-light);border-color:var(--ink);}
+
+/* ---------- Blog post: readable long-form typography ---------- */
+.post-body{font-size:1.08rem;line-height:1.78;color:var(--ink);}
+.post-body p{margin:0 0 1.4em;}
+.post-body h2,.post-body h3{font-family:var(--font-display);margin:1.6em 0 .6em;}
+.post-body blockquote{border-left:3px solid var(--gold);padding-left:22px;margin:1.8em 0;font-size:1.2rem;font-style:italic;color:var(--steel);}
+.post-body ul,.post-body ol{padding-left:1.4em;margin-bottom:1.4em;}
+.post-body img{margin:1.6em 0;width:100%;}
+.post-body a{color:var(--gold-dim);text-decoration:underline;}
+
+/* ---------- Comments (blog) & reviews (cars) ---------- */
+.comment-item,.review-item{padding:20px 0;border-bottom:1px solid var(--line);}
+.comment-item .who,.review-item .who{font-weight:700;font-size:.94rem;}
+.comment-item .when,.review-item .when{font-size:.78rem;color:var(--steel);margin-left:8px;font-weight:400;}
+.comment-form textarea,.review-form textarea{min-height:100px;}
+.pending-note{font-size:.82rem;color:var(--steel);margin-top:6px;}
+
+.star-rating{display:flex;gap:4px;}
+.star-rating button{background:none;border:0;font-size:1.7rem;line-height:1;color:var(--line);cursor:pointer;padding:0;}
+.star-rating button.active{color:var(--gold);}
+.stars-display{color:var(--gold);letter-spacing:2px;font-size:.95rem;}
+.review-summary{display:flex;align-items:center;gap:16px;margin-bottom:24px;flex-wrap:wrap;}
+.review-summary .avg{font-family:var(--font-display);font-size:2.6rem;font-weight:700;line-height:1;}
+.review-summary .count{color:var(--steel);font-size:.88rem;}
 
 /* ---------- Car card "add to cart" icon ---------- */
 .cart-toggle{
