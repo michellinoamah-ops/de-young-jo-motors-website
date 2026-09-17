@@ -1,0 +1,79 @@
+rules_version = '2';
+
+// =====================================================================
+// DE YOUNG JO MOTORS — Firestore Security Rules
+//
+// Model: the public website only ever READS cars/blogPosts/popups/
+// settings, and only ever CREATES enquiries/affiliateApplications.
+// Every write that changes site content requires the signed-in user's
+// uid to have a matching document in /admins/{uid}. That document is
+// created for the very first admin manually in the Firebase console
+// (see README "First-time setup"), and after that, additional admins
+// can be added either from the console or from the dashboard's
+// Settings → Admin users panel (which itself is gated by this rule).
+// =====================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // ---------------- Admins allowlist ----------------
+    // A user may read their OWN admin doc (used by the client to check
+    // "am I an admin"). Only an existing admin may add/remove admins.
+    match /admins/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ---------------- Cars (for sale & rental) ----------------
+    match /cars/{carId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ---------------- Blog ----------------
+    match /blogPosts/{postId} {
+      allow read: if resource.data.published == true || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ---------------- Contact page enquiries ----------------
+    // Anyone can submit one; only an admin can read the inbox or
+    // update it (mark read / attach a reply).
+    match /enquiries/{enquiryId} {
+      allow create: if request.resource.data.keys().hasAll(['name','email','message']) &&
+                      request.resource.data.name is string &&
+                      request.resource.data.email is string &&
+                      request.resource.data.message is string;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ---------------- Affiliate applications ----------------
+    match /affiliateApplications/{appId} {
+      allow create: if request.resource.data.keys().hasAll(['fullName','email','phone']);
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ---------------- Popups / offers ----------------
+    // Publicly readable (the site needs to know which are active);
+    // only an admin can create, edit, enable/disable or delete one.
+    match /popups/{popupId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ---------------- Site-wide settings ----------------
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Login | De Young Jo Motors</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/png" href="assets/img/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/admin.css">
+</head>
+<body class="admin-login-body">
+  <div class="admin-login-card cut-both">
+    <img src="assets/img/logo.png" alt="De Young Jo Motors" class="admin-login-logo">
+    <h1>Admin sign in</h1>
+    <p class="muted">Staff access only. Enter your admin email and password.</p>
+    <form id="loginForm">
+      <div class="form-field">
+        <label for="email">Email address</label>
+        <input id="email" type="email" required autocomplete="username">
+      </div>
+      <div class="form-field">
+        <label for="password">Password</label>
+        <input id="password" type="password" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn btn-gold btn-block" id="loginBtn">Sign in</button>
+      <div id="loginError" class="form-status"></div>
+    </form>
+    <a href="index.html" class="back-link">&larr; Back to the website</a>
+  </div>
+  <script type="module" src="assets/js/firebase-config.js"></script>
+  <script type="module" src="assets/js/admin-auth.js"></script>
+</body>
+</html>

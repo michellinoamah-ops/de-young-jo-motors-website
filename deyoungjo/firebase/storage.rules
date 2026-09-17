@@ -1,0 +1,64 @@
+rules_version = '2';
+
+// =====================================================================
+// DE YOUNG JO MOTORS — Storage Security Rules
+//
+// Public read for every image (car photos, blog covers, popup images)
+// so the website can display them without authentication. Writes
+// (upload/delete) require the signed-in user to be listed in the
+// Firestore "admins" collection — the same allowlist the Firestore
+// rules use, checked here via a cross-service firestore.exists() call.
+//
+// NOTE: cross-service rules (firestore.exists / firestore.get inside
+// Storage rules) are supported on current Firebase projects. If your
+// project's rules engine rejects the firestore.* calls below, use the
+// simpler fallback further down (any signed-in user may write) and
+// rely on only ever giving admin accounts a login.
+// =====================================================================
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAdmin() {
+      return request.auth != null &&
+        firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
+
+    match /cars/{carId}/{fileName} {
+      allow read: if true;
+      allow write: if isAdmin() && request.resource.size < 10 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*');
+    }
+
+    match /blog/{postId}/{fileName} {
+      allow read: if true;
+      allow write: if isAdmin() && request.resource.size < 10 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*');
+    }
+
+    match /popups/{popupId}/{fileName} {
+      allow read: if true;
+      allow write: if isAdmin() && request.resource.size < 10 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*');
+    }
+
+    // Fallback catch-all: deny everything else by default.
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------
+// FALLBACK VERSION (use only if firestore.exists() is unavailable to
+// your Storage rules — replace isAdmin() above with this instead):
+//
+// function isAdmin() {
+//   return request.auth != null;   // any signed-in user = trusted admin
+// }
+//
+// This is safe ONLY because admin-login.html is the sole place that
+// signs users in, and you should never share admin credentials with
+// non-staff. Prefer the firestore.exists() version above when possible.
+// ---------------------------------------------------------------------

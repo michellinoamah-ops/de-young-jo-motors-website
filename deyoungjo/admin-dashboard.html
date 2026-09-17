@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard | De Young Jo Motors</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/png" href="assets/img/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/admin.css">
+</head>
+<body>
+<div class="admin-shell">
+
+  <aside class="admin-sidebar" id="adminSidebar">
+    <div class="admin-sidebar-logo">
+      <img src="assets/img/logo.png" alt="Logo">
+      <span>DYJ Admin</span>
+    </div>
+    <nav class="admin-nav" id="adminNav">
+      <button data-section="overview" class="active"><span class="icon">&#9632;</span> Overview</button>
+      <button data-section="cars"><span class="icon">&#128663;</span> Cars &amp; Rentals</button>
+      <button data-section="blog"><span class="icon">&#128221;</span> Blog</button>
+      <button data-section="enquiries"><span class="icon">&#9993;</span> Enquiries</button>
+      <button data-section="affiliates"><span class="icon">&#129309;</span> Affiliate Applications</button>
+      <button data-section="popups"><span class="icon">&#128227;</span> Popups &amp; Offers</button>
+      <button data-section="settings"><span class="icon">&#9881;</span> Settings</button>
+    </nav>
+    <div class="admin-sidebar-foot">
+      <div class="who" id="whoAmI">Signed in</div>
+      <button class="btn btn-outline btn-sm btn-block" id="logoutBtn" style="color:#fff;">Log out</button>
+      <a href="index.html" class="btn btn-sm btn-block" style="color:var(--steel-light);margin-top:8px;">&larr; View website</a>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-topbar">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <button class="admin-burger" id="adminBurger">&#9776;</button>
+        <h2 id="sectionTitle">Overview</h2>
+      </div>
+    </div>
+
+    <div class="admin-content">
+
+      <!-- OVERVIEW -->
+      <section id="sec-overview" class="admin-section">
+        <div class="stat-grid">
+          <div class="stat-card"><div class="n" id="statCars">–</div><div class="l">Cars for sale</div></div>
+          <div class="stat-card"><div class="n" id="statRentals">–</div><div class="l">Rental vehicles</div></div>
+          <div class="stat-card"><div class="n" id="statEnquiries">–</div><div class="l">New enquiries</div></div>
+          <div class="stat-card"><div class="n" id="statAffiliates">–</div><div class="l">Affiliate applications</div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>Quick actions</h3></div>
+          <div style="display:flex;gap:14px;flex-wrap:wrap;">
+            <button class="btn btn-gold" data-jump="cars" data-open="addCar">+ Add a car listing</button>
+            <button class="btn btn-ink" data-jump="blog" data-open="addPost">+ Write a blog post</button>
+            <button class="btn btn-outline" data-jump="popups" data-open="addPopup">+ Create a popup</button>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>Latest enquiries</h3></div>
+          <div id="overviewEnquiries"><p class="empty-state">Loading…</p></div>
+        </div>
+      </section>
+
+      <!-- CARS -->
+      <section id="sec-cars" class="admin-section hidden">
+        <div class="panel-head" style="margin-bottom:16px;">
+          <h3>All vehicles</h3>
+          <button class="btn btn-gold" id="btnAddCar">+ Add vehicle</button>
+        </div>
+        <div class="panel">
+          <div style="overflow-x:auto;">
+          <table class="admin-table">
+            <thead><tr><th>Photo</th><th>Vehicle</th><th>Type</th><th>Price</th><th>Status</th><th>Featured</th><th>Actions</th></tr></thead>
+            <tbody id="carsTableBody"><tr><td colspan="7" class="empty-state">Loading…</td></tr></tbody>
+          </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- BLOG -->
+      <section id="sec-blog" class="admin-section hidden">
+        <div class="panel-head" style="margin-bottom:16px;">
+          <h3>Blog posts</h3>
+          <button class="btn btn-gold" id="btnAddPost">+ New post</button>
+        </div>
+        <div class="panel">
+          <div style="overflow-x:auto;">
+          <table class="admin-table">
+            <thead><tr><th>Cover</th><th>Title</th><th>Category</th><th>Published</th><th>Date</th><th>Actions</th></tr></thead>
+            <tbody id="postsTableBody"><tr><td colspan="6" class="empty-state">Loading…</td></tr></tbody>
+          </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ENQUIRIES -->
+      <section id="sec-enquiries" class="admin-section hidden">
+        <div class="panel-head" style="margin-bottom:16px;"><h3>Contact page enquiries</h3></div>
+        <div id="enquiriesList"><p class="empty-state">Loading…</p></div>
+      </section>
+
+      <!-- AFFILIATES -->
+      <section id="sec-affiliates" class="admin-section hidden">
+        <div class="panel-head" style="margin-bottom:16px;"><h3>Affiliate applications</h3></div>
+        <div class="panel">
+          <div style="overflow-x:auto;">
+          <table class="admin-table">
+            <thead><tr><th>Name</th><th>Contact</th><th>Platform</th><th>Audience</th><th>Status</th><th>Applied</th></tr></thead>
+            <tbody id="affiliatesTableBody"><tr><td colspan="6" class="empty-state">Loading…</td></tr></tbody>
+          </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- POPUPS -->
+      <section id="sec-popups" class="admin-section hidden">
+        <div class="panel-head" style="margin-bottom:16px;">
+          <h3>Site popups &amp; offers</h3>
+          <button class="btn btn-gold" id="btnAddPopup">+ New popup</button>
+        </div>
+        <p class="muted">Each popup can be shown a set number of times per visitor, then it stops appearing for them automatically. Turn any popup off without deleting it.</p>
+        <div class="panel">
+          <div style="overflow-x:auto;">
+          <table class="admin-table">
+            <thead><tr><th>Image</th><th>Title</th><th>Shows/visitor</th><th>Banner</th><th>Active</th><th>Actions</th></tr></thead>
+            <tbody id="popupsTableBody"><tr><td colspan="6" class="empty-state">Loading…</td></tr></tbody>
+          </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section id="sec-settings" class="admin-section hidden">
+        <div class="panel">
+          <div class="panel-head"><h3>Site information</h3></div>
+          <form id="settingsForm">
+            <div class="form-row">
+              <div class="form-field"><label>Public contact email</label><input name="siteEmail" placeholder="info@deyoungjomotors.com"></div>
+              <div class="form-field"><label>Display phone number</label><input name="sitePhone" placeholder="+234 806 272 9739"></div>
+            </div>
+            <div class="form-field"><label>Showroom address</label><input name="siteAddress" placeholder="Street, City, State"></div>
+            <div class="form-field"><label>Affiliate onboarding form URL (Google Form link)</label><input name="affiliateFormUrl" placeholder="https://forms.gle/..."></div>
+            <button type="submit" class="btn btn-gold">Save settings</button>
+            <div id="settingsStatus" class="form-status"></div>
+          </form>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h3>Email reply setup (EmailJS, optional)</h3></div>
+          <p class="muted">Without this, replying to an enquiry opens your own email app pre-filled (always works). Add EmailJS keys here to send replies straight from this dashboard instead. See the README for the 5-minute EmailJS setup.</p>
+          <form id="emailjsForm">
+            <div class="form-row">
+              <div class="form-field"><label>Service ID</label><input name="emailjsServiceId" placeholder="service_xxxx"></div>
+              <div class="form-field"><label>Template ID</label><input name="emailjsTemplateId" placeholder="template_xxxx"></div>
+            </div>
+            <div class="form-field"><label>Public key</label><input name="emailjsPublicKey" placeholder="public key"></div>
+            <button type="submit" class="btn btn-ink">Save EmailJS settings</button>
+            <div id="emailjsStatus" class="form-status"></div>
+          </form>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h3>Admin users</h3></div>
+          <p class="muted">Add another staff account. They'll be able to sign in at <code>admin-login.html</code> with the email and password you set here.</p>
+          <form id="addAdminForm">
+            <div class="form-row">
+              <div class="form-field"><label>Email</label><input name="newAdminEmail" type="email" required></div>
+              <div class="form-field"><label>Temporary password</label><input name="newAdminPassword" type="text" required minlength="6"></div>
+            </div>
+            <button type="submit" class="btn btn-ink">Create admin account</button>
+            <div id="addAdminStatus" class="form-status"></div>
+          </form>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<!-- Modal mount point -->
+<div id="modalMount"></div>
+<div id="toastMount"></div>
+
+<script type="module" src="assets/js/firebase-config.js"></script>
+<script type="module" src="assets/js/admin.js"></script>
+</body>
+</html>

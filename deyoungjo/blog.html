@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blog | De Young Jo Motors</title>
+<meta name="description" content="Car buying guides, rental tips and maintenance advice from De Young Jo Motors, Nigeria's car sales and rental specialists.">
+<link rel="canonical" href="https://www.deyoungjomotors.com/blog.html">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#14120F">
+<link rel="icon" type="image/png" href="assets/img/logo.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="De Young Jo Motors">
+<meta property="og:title" content="Blog | De Young Jo Motors">
+<meta property="og:description" content="Car buying guides, rental tips and maintenance advice from De Young Jo Motors, Nigeria's car sales and rental specialists.">
+<meta property="og:image" content="assets/img/logo.png">
+<meta property="og:url" content="https://www.deyoungjomotors.com/blog.html">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Blog | De Young Jo Motors">
+<meta name="twitter:description" content="Car buying guides, rental tips and maintenance advice from De Young Jo Motors, Nigeria's car sales and rental specialists.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+
+</head>
+<body>
+<div id="dyjAnnounceMount"></div>
+<header class="nav">
+  <div class="nav-row">
+    <a href="index.html" class="nav-logo">
+      <img src="assets/img/logo.png" alt="De Young Jo Motors logo">
+    </a>
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="cars-for-sale.html">Buy a Car</a>
+      <a href="used-cars.html">Used Cars</a>
+      <a href="car-rental.html">Rent a Car</a>
+      <a href="blog.html" class="active">Blog</a>
+      <a href="affiliate.html">Affiliate</a>
+      <a href="about.html">About</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+    <div class="nav-cta">
+      <a href="tel:+2348062729739" class="btn btn-outline btn-sm" style="color:#fff;">Call Us</a>
+      <a href="#" class="btn btn-wa btn-sm" data-wa-message="Hi De Young Jo Motors, I'm on your website and I'd like some help.">WhatsApp</a>
+    </div>
+    <button class="nav-burger" aria-label="Open menu">&#9776;</button>
+  </div>
+  <div class="nav-mobile">
+    <a href="index.html">Home</a>
+      <a href="cars-for-sale.html">Buy a Car</a>
+      <a href="used-cars.html">Used Cars</a>
+      <a href="car-rental.html">Rent a Car</a>
+      <a href="blog.html" class="active">Blog</a>
+      <a href="affiliate.html">Affiliate</a>
+      <a href="about.html">About</a>
+      <a href="contact.html">Contact</a>
+  </div>
+</header>
+
+<div class="page-head">
+  <div class="container">
+    <div class="crumb"><a href="index.html">Home</a> / Blog</div>
+    <h1>Guides, tips &amp; news</h1>
+    <p style="color:var(--steel-light);max-width:60ch;">Buying guides, rental advice and maintenance tips from the De Young Jo Motors team.</p>
+  </div>
+</div>
+<section class="section">
+  <div class="container">
+    <div class="grid grid-3" id="blogGrid"></div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <div class="footer-logo">
+          <img src="assets/img/logo.png" alt="De Young Jo Motors">
+        </div>
+        <p style="max-width:34ch;">De Young Jo Motors sells quality new and pre-owned vehicles and offers flexible short and long-term car rentals across Nigeria.</p>
+        <div class="footer-social">
+          <a href="#" aria-label="Instagram">IG</a>
+          <a href="#" aria-label="Facebook">FB</a>
+          <a href="#" aria-label="X">X</a>
+        </div>
+      </div>
+      <div>
+        <h4>Explore</h4>
+        <a href="cars-for-sale.html">Cars for sale</a>
+        <a href="car-rental.html">Car rental</a>
+        <a href="blog.html">Blog</a>
+        <a href="affiliate.html">Become an affiliate</a>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <a href="about.html">About us</a>
+        <a href="contact.html">Contact us</a>
+        <a href="admin-login.html" style="opacity:.35;font-size:.8rem;">Staff login</a>
+      </div>
+      <div>
+        <h4>Talk to us</h4>
+        <a href="tel:+2348062729739">+234 806 272 9739</a>
+        <a href="#" data-wa-message="Hi De Young Jo Motors, I'd like to speak with someone about your cars.">Chat on WhatsApp</a>
+        <a href="mailto:info@deyoungjomotors.com">info@deyoungjomotors.com</a>
+        <p class="muted" style="margin-top:10px;font-size:.85rem;">Mon – Sat: 8am – 7pm</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; <span id="year"></span> De Young Jo Motors. All rights reserved. <span id="adminGate" title="" style="cursor:default;opacity:.4;padding:0 4px;">&middot;</span></span>
+      <span>Cars for sale &amp; car rental in Nigeria</span>
+    </div>
+  </div>
+</footer>
+<div id="dyjPopupMount"></div>
+<script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+<script type="module" src="assets/js/firebase-config.js"></script>
+<script type="module" src="assets/js/main.js"></script>
+<script type="module">import { loadPosts } from "./assets/js/blog.js"; loadPosts("blogGrid");</script>
+</body>
+</html>
