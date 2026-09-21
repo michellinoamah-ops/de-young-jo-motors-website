@@ -8,7 +8,7 @@
 // =====================================================================
 import { db, waLink } from "./firebase-config.js";
 import {
-  collection, query, where, orderBy, limit as fbLimit, getDocs, doc, getDoc
+  collection, query, where, orderBy, limit as fbLimit, getDocs, doc, getDoc, startAfter
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 import { wireCartButtons } from "./cart.js";
 
@@ -157,3 +157,125 @@ export async function loadCarDetails(id) {
   if (!snap.exists()) return null;
   return { id: snap.id, ...snap.data() };
 }
+
+/* =====================================================================
+   PAGINATED LISTING ("Load more")
+   For the main browsing pages (Cars for Sale, Used Cars, Car Rental),
+   which can hold hundreds of vehicles. A "Load more" button was chosen
+   over numbered pages: it keeps the visitor in one continuous scroll
+   (friendlier on mobile, no page-jump to reorient after), and it maps
+   directly onto Firestore's cursor-based pagination (startAfter), which
+   is the efficient way to page through a large collection: it never re-
+   reads earlier results the way an OFFSET-style "page 4 of 40" would.
+
+   One real constraint this works around: filters like "used only"
+   (condition != New) or a maximum price can't always be expressed as a
+   Firestore query directly (Firestore allows only one inequality filter
+   per query, and "status != hidden" already uses that slot). Those
+   filters are applied after fetching a page. If they happen to filter
+   an entire fetched batch down to nothing, this keeps fetching the next
+   batch automatically rather than showing a false "no more results".
+========================================================================= */
+export function createCarLoader(containerId, moreButtonId, pageSize = 24) {
+  const el = document.getElementById(containerId);
+  const moreBtn = document.getElementById(moreButtonId);
+  let cursor = null;
+  let filters = {};
+  let exhausted = false;
+  let loading = false;
+
+  function passesClientFilters(car) {
+    if (filters.maxPrice) {
+      const price = car.type === "rental" ? car.rentalPricePerDay : car.price;
+      if (!(price <= Number(filters.maxPrice))) return false;
+    }
+    if (filters.usedOnly && (car.condition || "") === "New") return false;
+    return true;
+  }
+
+  async function fetchRawBatch() {
+    const clauses = [where("status", "!=", "hidden")];
+    if (filters.type) clauses.push(where("type", "==", filters.type));
+    if (filters.category) clauses.push(where("category", "==", filters.category));
+    if (filters.transmission) clauses.push(where("transmission", "==", filters.transmission));
+    if (filters.fuelType) clauses.push(where("fuelType", "==", filters.fuelType));
+    if (filters.condition) clauses.push(where("condition", "==", filters.condition));
+    let q = query(collection(db, "cars"), ...clauses, orderBy("createdAt", "desc"));
+    if (cursor) q = query(q, startAfter(cursor));
+    q = query(q, fbLimit(pageSize));
+    const snap = await getDocs(q);
+    const raw = [];
+    snap.forEach(d => raw.push({ id: d.id, ...d.data() }));
+    cursor = snap.docs.length ? snap.docs[snap.docs.length - 1] : cursor;
+    if (snap.docs.length < pageSize) exhausted = true;
+    return raw;
+  }
+
+  /** Fetches batches until at least one passes the client-side filters,
+   *  or the collection runs out, whichever comes first. */
+  async function fetchFilteredBatch() {
+    let collected = [];
+    let guard = 0; // safety net: never loop more than 10 batches for one click
+    while (!collected.length && !exhausted && guard < 10) {
+      const raw = await fetchRawBatch();
+      collected = raw.filter(passesClientFilters);
+      guard++;
+    }
+    return collected;
+  }
+
+  async function reset(newFilters) {
+    filters = newFilters || {};
+    cursor = null;
+    exhausted = false;
+    loading = true;
+    el.innerHTML = skeletonCards(pageSize > 12 ? 12 : pageSize);
+    try {
+      const cars = await fetchFilteredBatch();
+      if (!cars.length) {
+        el.innerHTML = `<div class="tac" style="grid-column:1/-1;padding:40px 0;">
+          <p>No vehicles match right now. New stock is added weekly, so message us on WhatsApp and we'll help you find the right one.</p>
+          <a class="btn btn-wa" data-wa-message="Hi, I'm looking for a specific car and didn't see it listed on your site yet. Can you help?" href="#">Ask us on WhatsApp</a>
+        </div>`;
+        wireWhatsAppInline(el);
+        moreBtn.classList.add("hidden");
+      } else {
+        el.innerHTML = cars.map(carCardHTML).join("");
+        wireWhatsAppInline(el);
+        wireCartButtons(el);
+        moreBtn.classList.toggle("hidden", exhausted);
+      }
+    } catch (e) {
+      console.error(e);
+      el.innerHTML = `<p class="tac" style="grid-column:1/-1;">Couldn't load vehicles right now. Please refresh, or reach us directly on WhatsApp.</p>`;
+      moreBtn.classList.add("hidden");
+    } finally {
+      loading = false;
+    }
+  }
+
+  async function loadMore() {
+    if (loading || exhausted) return;
+    loading = true;
+    const originalLabel = moreBtn.textContent;
+    moreBtn.disabled = true; moreBtn.textContent = "Loading…";
+    try {
+      const cars = await fetchFilteredBatch();
+      if (cars.length) {
+        el.insertAdjacentHTML("beforeend", cars.map(carCardHTML).join(""));
+        wireWhatsAppInline(el);
+        wireCartButtons(el);
+      }
+      moreBtn.classList.toggle("hidden", exhausted);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      loading = false;
+      moreBtn.disabled = false; moreBtn.textContent = originalLabel;
+    }
+  }
+
+  if (moreBtn) moreBtn.addEventListener("click", loadMore);
+  return { reset, loadMore };
+}
+

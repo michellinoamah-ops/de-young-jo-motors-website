@@ -92,6 +92,7 @@
   <button class="btn btn-gold" id="fApply">Apply filters</button>
 </div>
     <div class="grid grid-3" id="saleCarsGrid"></div>
+    <div class="load-more-wrap"><button class="btn btn-ink btn-load-more hidden" id="saleLoadMore">Load more cars</button></div>
     <p class="tac muted" style="margin-top:20px;">Shopping on a budget? <a href="used-cars.html" style="color:var(--gold-light);font-weight:700;">See our used cars page &rarr;</a> for inspected pre-owned vehicles at lower prices.</p>
   </div>
 </section>
@@ -227,7 +228,7 @@
 <script type="module" src="assets/js/firebase-config.js"></script>
 <script type="module" src="assets/js/main.js"></script>
 <script type="module">
-  import { loadCars } from "./assets/js/cars.js";
+  import { createCarLoader } from "./assets/js/cars.js";
   function currentFilters(){
     return {
       type: "sale",
@@ -244,8 +245,9 @@
   if (p.get("transmission")) document.getElementById("fTransmission").value = p.get("transmission");
   if (p.get("condition")) document.getElementById("fCondition").value = p.get("condition");
   if (p.get("maxPrice")) document.getElementById("fPrice").value = p.get("maxPrice");
-  loadCars("saleCarsGrid", currentFilters());
-  document.getElementById("fApply").addEventListener("click", () => loadCars("saleCarsGrid", currentFilters()));
+  const loader = createCarLoader("saleCarsGrid", "saleLoadMore");
+  loader.reset(currentFilters());
+  document.getElementById("fApply").addEventListener("click", () => loader.reset(currentFilters()));
 </script>
 </body>
 </html>

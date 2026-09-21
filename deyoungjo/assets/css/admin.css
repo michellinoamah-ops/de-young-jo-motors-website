@@ -111,8 +111,20 @@
 
 /* ---------------- Quill rich text editor (blog post content) ---------------- */
 #postQuillToolbar{border:1px solid var(--line);border-bottom:0;background:#fff;}
-#postQuillEditor{min-height:260px;max-height:460px;overflow-y:auto;background:#fff;font-family:var(--font-body);font-size:.98rem;}
-#postQuillEditor .ql-editor{min-height:260px;}
+/* The live blog page has a black background (see style.css), so the
+   editing surface matches it here. This matters beyond looks: if the
+   admin never touches the colour picker, Quill saves NO inline colour
+   at all, and that text will inherit whatever colour the page it lands
+   on uses. Editing on a white surface made default (black) text look
+   fine while writing, then invisible once published on a black page.
+   Editing on black, with light default text, means what's on screen
+   while writing is what actually publishes. */
+#postQuillEditor{min-height:260px;max-height:460px;overflow-y:auto;background:var(--ink);font-family:var(--font-body);font-size:.98rem;}
+#postQuillEditor .ql-editor{min-height:260px;color:var(--text-dark-bg);}
+#postQuillEditor .ql-editor.ql-blank::before{color:var(--steel-light);font-style:normal;}
+#postQuillEditor .ql-editor h1,#postQuillEditor .ql-editor h2,#postQuillEditor .ql-editor h3{color:#fff;}
+#postQuillEditor .ql-editor a{color:var(--gold-light);}
+#postQuillEditor .ql-editor blockquote{border-left:3px solid var(--gold);color:var(--steel-light);}
 
 /* Custom font whitelist needs its own labels; Quill's default CSS only
    knows how to label its built-in sans-serif/serif/monospace options. */
@@ -148,3 +160,16 @@
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:13px 22px;z-index:400;font-size:.9rem;box-shadow:0 8px 24px rgba(0,0,0,.3);}
 .empty-state{text-align:center;padding:40px 20px;color:var(--steel);}
 .login-locked{opacity:.6;pointer-events:none;}
+
+/* ---------------- Crop tool ---------------- */
+.crop-modal-overlay{position:fixed;inset:0;background:rgba(20,18,15,.75);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;}
+.crop-modal{background:var(--paper);color:var(--steel);max-width:640px;width:100%;padding:24px;max-height:90vh;overflow-y:auto;}
+.crop-modal h3{margin-top:0;color:var(--ink);}
+.crop-modal-image-wrap{max-height:50vh;overflow:hidden;background:#000;margin-bottom:16px;}
+.crop-modal-image-wrap img{max-width:100%;display:block;}
+.crop-modal-ratios{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
+.crop-modal-ratios button{
+  background:#fff;border:1px solid var(--line);padding:7px 14px;font-size:.82rem;font-weight:600;color:var(--steel);cursor:pointer;
+}
+.crop-modal-ratios button.active{background:var(--ink);color:var(--gold-light);border-color:var(--ink);}
+.crop-modal-actions{display:flex;justify-content:flex-end;gap:10px;}

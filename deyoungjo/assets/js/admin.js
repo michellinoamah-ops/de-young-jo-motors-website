@@ -39,6 +39,86 @@ function toast(msg) {
   setTimeout(() => t.remove(), 3200);
 }
 
+/* =====================================================================
+   CROP TOOL
+   A shared crop step for every image upload in the dashboard (car
+   photos, spare part photos, popup images, blog cover images, and
+   images inserted inside a blog post). Built on Cropper.js. Cropping is
+   optional per image, "Skip cropping" uses the original file untouched.
+===================================================================== */
+function cropImageFile(file) {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const overlay = document.createElement("div");
+    overlay.className = "crop-modal-overlay";
+    overlay.innerHTML = `
+      <div class="crop-modal">
+        <h3>Crop photo</h3>
+        <div class="crop-modal-image-wrap"><img id="cropTargetImg" src="${url}"></div>
+        <div class="crop-modal-ratios">
+          <button type="button" data-ratio="free" class="active">Free</button>
+          <button type="button" data-ratio="1">Square 1:1</button>
+          <button type="button" data-ratio="1.3333">Standard 4:3</button>
+          <button type="button" data-ratio="1.7778">Wide 16:9</button>
+        </div>
+        <div class="crop-modal-actions">
+          <button type="button" class="btn btn-outline" id="cropSkipBtn">Skip cropping</button>
+          <button type="button" class="btn btn-gold" id="cropConfirmBtn">Crop &amp; use</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    const imgEl = overlay.querySelector("#cropTargetImg");
+    const cropper = new Cropper(imgEl, { viewMode: 1, autoCropArea: 1, aspectRatio: NaN, background: false });
+
+    overlay.querySelectorAll("[data-ratio]").forEach(btn => btn.addEventListener("click", () => {
+      overlay.querySelectorAll("[data-ratio]").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      cropper.setAspectRatio(btn.dataset.ratio === "free" ? NaN : Number(btn.dataset.ratio));
+    }));
+
+    function cleanup() {
+      cropper.destroy();
+      overlay.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    overlay.querySelector("#cropSkipBtn").addEventListener("click", () => {
+      cleanup();
+      resolve(file);
+    });
+    overlay.querySelector("#cropConfirmBtn").addEventListener("click", () => {
+      cropper.getCroppedCanvas({ maxWidth: 2200, maxHeight: 2200 }).toBlob((blob) => {
+        cleanup();
+        resolve(blob ? new File([blob], file.name, { type: blob.type || file.type }) : file);
+      }, file.type && file.type !== "image/gif" ? file.type : "image/jpeg", 0.9);
+    });
+  });
+}
+
+async function cropImageFiles(fileList) {
+  const out = [];
+  for (const file of Array.from(fileList)) out.push(await cropImageFile(file));
+  return out;
+}
+
+/** Wires a file input so every image picked through it is offered for
+ *  cropping immediately, before anything else happens with it. Uses the
+ *  DataTransfer trick to replace the input's own FileList, so whatever
+ *  code reads `input.files` later (on form submit) sees the cropped
+ *  version and needs no other changes. */
+function wireCropOnSelect(inputEl) {
+  if (!inputEl || inputEl.dataset.cropWired) return;
+  inputEl.dataset.cropWired = "1";
+  inputEl.addEventListener("change", async () => {
+    if (!inputEl.files || !inputEl.files.length) return;
+    const cropped = await cropImageFiles(inputEl.files);
+    const dt = new DataTransfer();
+    cropped.forEach(f => dt.items.add(f));
+    inputEl.files = dt.files;
+  });
+}
+
 function fmtDate(ts) {
   try {
     const d = ts?.toDate ? ts.toDate() : new Date(ts);
@@ -233,13 +313,13 @@ function carFormHTML(car = {}) {
     </form>`;
 }
 
-function initCars() {
-  $("#btnAddCar").addEventListener("click", () => openCarModal());
-  onSnapshot(query(collection(db, "cars"), orderBy("createdAt", "desc")), snap => {
-    const rows = [];
-    snap.forEach(d => rows.push({ id: d.id, ...d.data() }));
-    rows.forEach(c => carsMap[c.id] = `${c.year||''} ${c.brand||''} ${c.model||''}`.trim());
-    $("#carsTableBody").innerHTML = rows.length ? rows.map(c => `
+let allCarsRows = [];
+function renderCarsTable() {
+  const q = ($("#carsSearchInput")?.value || "").trim().toLowerCase();
+  const rows = q
+    ? allCarsRows.filter(c => `${c.year||''} ${c.brand||''} ${c.model||''}`.toLowerCase().includes(q))
+    : allCarsRows;
+  $("#carsTableBody").innerHTML = rows.length ? rows.map(c => `
       <tr>
         <td><img class="thumb" src="${(c.images&&c.images[0])||''}" onerror="this.style.opacity=0"></td>
         <td>${c.year||''} ${c.brand||''} ${c.model||''}</td>
@@ -251,19 +331,34 @@ function initCars() {
           <button class="btn btn-sm btn-outline" data-edit-car="${c.id}">Edit</button>
           <button class="btn btn-sm btn-danger" data-del-car="${c.id}">Delete</button>
         </td>
-      </tr>`).join("") : `<tr><td colspan="7" class="empty-state">No vehicles yet. Add your first one.</td></tr>`;
+      </tr>`).join("") : `<tr><td colspan="7" class="empty-state">${q ? "No vehicles match that search." : "No vehicles yet. Add your first one."}</td></tr>`;
 
-    $$('[data-feat]').forEach(cb => cb.addEventListener("change", () =>
-      updateDoc(doc(db, "cars", cb.dataset.feat), { featured: cb.checked })));
-    $$('[data-edit-car]').forEach(b => b.addEventListener("click", () => {
-      const car = rows.find(r => r.id === b.dataset.editCar);
-      openCarModal(car);
-    }));
-    $$('[data-del-car]').forEach(b => b.addEventListener("click", async () => {
-      if (!confirm("Delete this vehicle listing? This can't be undone.")) return;
-      await deleteDoc(doc(db, "cars", b.dataset.delCar));
-      toast("Vehicle deleted.");
-    }));
+  $("#carsCountNote").textContent = allCarsRows.length
+    ? (q ? `Showing ${rows.length} of ${allCarsRows.length} vehicles.` : `${allCarsRows.length} vehicle${allCarsRows.length===1?"":"s"} total.`)
+    : "";
+
+  $$('[data-feat]').forEach(cb => cb.addEventListener("change", () =>
+    updateDoc(doc(db, "cars", cb.dataset.feat), { featured: cb.checked })));
+  $$('[data-edit-car]').forEach(b => b.addEventListener("click", () => {
+    const car = allCarsRows.find(r => r.id === b.dataset.editCar);
+    openCarModal(car);
+  }));
+  $$('[data-del-car]').forEach(b => b.addEventListener("click", async () => {
+    if (!confirm("Delete this vehicle listing? This can't be undone.")) return;
+    await deleteDoc(doc(db, "cars", b.dataset.delCar));
+    toast("Vehicle deleted.");
+  }));
+}
+
+function initCars() {
+  $("#btnAddCar").addEventListener("click", () => openCarModal());
+  $("#carsSearchInput").addEventListener("input", renderCarsTable);
+  onSnapshot(query(collection(db, "cars"), orderBy("createdAt", "desc")), snap => {
+    const rows = [];
+    snap.forEach(d => rows.push({ id: d.id, ...d.data() }));
+    rows.forEach(c => carsMap[c.id] = `${c.year||''} ${c.brand||''} ${c.model||''}`.trim());
+    allCarsRows = rows;
+    renderCarsTable();
   });
 }
 
@@ -271,6 +366,7 @@ function openCarModal(car) {
   const overlay = openModal(carFormHTML(car || {}));
   $(".admin-modal-close", overlay).addEventListener("click", () => closeModal(overlay));
   const form = $("#carForm", overlay);
+  wireCropOnSelect(form.querySelector('input[name=images]'));
 
   // Mutable working copy of the saved photo URLs, so the admin can reorder
   // (promote one to "cover") or remove one before saving, independent of
@@ -402,12 +498,13 @@ function partFormHTML(part = {}) {
     </form>`;
 }
 
-function initParts() {
-  $("#btnAddPart").addEventListener("click", () => openPartModal());
-  onSnapshot(query(collection(db, "spareParts"), orderBy("createdAt", "desc")), snap => {
-    const rows = [];
-    snap.forEach(d => rows.push({ id: d.id, ...d.data() }));
-    $("#partsTableBody").innerHTML = rows.length ? rows.map(p => `
+let allPartsRows = [];
+function renderPartsTable() {
+  const q = ($("#partsSearchInput")?.value || "").trim().toLowerCase();
+  const rows = q
+    ? allPartsRows.filter(p => `${p.name||''} ${p.category||''}`.toLowerCase().includes(q))
+    : allPartsRows;
+  $("#partsTableBody").innerHTML = rows.length ? rows.map(p => `
       <tr>
         <td><img class="thumb" src="${(p.images&&p.images[0])||''}" onerror="this.style.opacity=0"></td>
         <td>${p.name||''}</td>
@@ -419,19 +516,33 @@ function initParts() {
           <button class="btn btn-sm btn-outline" data-edit-part="${p.id}">Edit</button>
           <button class="btn btn-sm btn-danger" data-del-part="${p.id}">Delete</button>
         </td>
-      </tr>`).join("") : `<tr><td colspan="7" class="empty-state">No spare parts yet, add your first one.</td></tr>`;
+      </tr>`).join("") : `<tr><td colspan="7" class="empty-state">${q ? "No parts match that search." : "No spare parts yet, add your first one."}</td></tr>`;
 
-    $$('[data-feat-part]').forEach(cb => cb.addEventListener("change", () =>
-      updateDoc(doc(db, "spareParts", cb.dataset.featPart), { featured: cb.checked })));
-    $$('[data-edit-part]').forEach(b => b.addEventListener("click", () => {
-      const part = rows.find(r => r.id === b.dataset.editPart);
-      openPartModal(part);
-    }));
-    $$('[data-del-part]').forEach(b => b.addEventListener("click", async () => {
-      if (!confirm("Delete this spare part listing? This can't be undone.")) return;
-      await deleteDoc(doc(db, "spareParts", b.dataset.delPart));
-      toast("Spare part deleted.");
-    }));
+  $("#partsCountNote").textContent = allPartsRows.length
+    ? (q ? `Showing ${rows.length} of ${allPartsRows.length} parts.` : `${allPartsRows.length} part${allPartsRows.length===1?"":"s"} total.`)
+    : "";
+
+  $$('[data-feat-part]').forEach(cb => cb.addEventListener("change", () =>
+    updateDoc(doc(db, "spareParts", cb.dataset.featPart), { featured: cb.checked })));
+  $$('[data-edit-part]').forEach(b => b.addEventListener("click", () => {
+    const part = allPartsRows.find(r => r.id === b.dataset.editPart);
+    openPartModal(part);
+  }));
+  $$('[data-del-part]').forEach(b => b.addEventListener("click", async () => {
+    if (!confirm("Delete this spare part listing? This can't be undone.")) return;
+    await deleteDoc(doc(db, "spareParts", b.dataset.delPart));
+    toast("Spare part deleted.");
+  }));
+}
+
+function initParts() {
+  $("#btnAddPart").addEventListener("click", () => openPartModal());
+  $("#partsSearchInput").addEventListener("input", renderPartsTable);
+  onSnapshot(query(collection(db, "spareParts"), orderBy("createdAt", "desc")), snap => {
+    const rows = [];
+    snap.forEach(d => rows.push({ id: d.id, ...d.data() }));
+    allPartsRows = rows;
+    renderPartsTable();
   });
 }
 
@@ -439,6 +550,7 @@ function openPartModal(part) {
   const overlay = openModal(partFormHTML(part || {}));
   $(".admin-modal-close", overlay).addEventListener("click", () => closeModal(overlay));
   const form = $("#partForm", overlay);
+  wireCropOnSelect(form.querySelector('input[name=images]'));
 
   let currentImages = [...(part && part.images || [])];
   const pendingDeletes = [];
@@ -532,6 +644,15 @@ function registerQuillExtras() {
   SizeStyle.whitelist = ["14px", "16px", "18px", "20px", "24px", "32px"];
   Quill.register(SizeStyle, true);
 
+  // Same reasoning for alignment: Quill's default aligner writes a class
+  // ("ql-align-center") that only turns into actual centring if Quill's
+  // stylesheet is loaded to interpret it. The public blog page doesn't
+  // load it, so centred/right-aligned/justified text was silently
+  // reverting to plain left-aligned once published. The style-based
+  // version writes text-align directly as inline CSS instead.
+  const AlignStyle = Quill.import("attributors/style/align");
+  Quill.register(AlignStyle, true);
+
   if (window.ImageResize) {
     Quill.register("modules/imageResize", window.ImageResize.default || window.ImageResize);
   }
@@ -559,6 +680,11 @@ function postFormHTML(post = {}) {
         <input type="file" name="cover" accept="image/*">
       </div>
       <div class="form-field"><label>Excerpt (short summary)</label><textarea name="excerpt" style="min-height:70px;">${post.excerpt||''}</textarea></div>
+      <div class="form-field">
+        <label>Import from a Word document (optional)</label>
+        <input type="file" id="postImportDocx" accept=".docx">
+        <p class="form-note" id="importDocxStatus">Upload a .docx file to bring in its headings, bold/italic text, lists and images as the article content below, replacing whatever is currently in the editor. Review and adjust after importing, then publish as usual. PDF and .doc (older Word format) aren't supported, save as .docx first.</p>
+      </div>
       <div class="form-field">
         <label>Content</label>
         <div id="postQuillToolbar">
@@ -602,6 +728,7 @@ function postFormHTML(post = {}) {
         <div id="postQuillEditor"></div>
         <textarea name="content" id="postContentHidden" style="display:none;">${post.content||''}</textarea>
         <p class="form-note">Click an image after inserting it to drag-resize it from its corners, and use its small floating toolbar to place it left, right, or centre with text wrapping around it.</p>
+        <p class="form-note">The published article page has a black background, and this editor matches it. If you use the text colour tool, pick a light colour, a dark one will disappear against the black page even though it may look fine here if you mix up foreground and background.</p>
       </div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
         <label class="switch"><input type="checkbox" name="published" ${post.published!==false?"checked":""}><span class="slider"></span></label>
@@ -648,6 +775,7 @@ function openPostModal(post) {
   const overlay = openModal(postFormHTML(post || {}), true);
   $(".admin-modal-close", overlay).addEventListener("click", () => closeModal(overlay));
   const form = $("#postForm", overlay);
+  wireCropOnSelect(form.querySelector('input[name=cover]'));
 
   registerQuillExtras();
 
@@ -664,6 +792,94 @@ function openPostModal(post) {
     placeholder: "Write the article here…",
   });
   quill.root.innerHTML = hiddenContent.value || "";
+
+  // Images inserted INTO the article body: crop first, then upload to
+  // Storage and insert the resulting URL. Uploading rather than embedding
+  // as base64 matters here: Firestore documents cap out at 1 MiB, and a
+  // few embedded photos would blow past that easily.
+  quill.getModule("toolbar").addHandler("image", () => {
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = "image/*";
+    fileInput.addEventListener("change", async () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+      const cropped = await cropImageFile(file);
+      const range = quill.getSelection(true) || { index: quill.getLength() };
+      quill.insertText(range.index, "Uploading image…", { italic: true });
+      try {
+        const path = `blogContent/${Date.now()}-${cropped.name}`;
+        const storageRef = ref(storage, path);
+        await uploadBytes(storageRef, cropped);
+        const url = await getDownloadURL(storageRef);
+        quill.deleteText(range.index, "Uploading image…".length);
+        quill.insertEmbed(range.index, "image", url, "user");
+        quill.setSelection(range.index + 1);
+      } catch (err) {
+        quill.deleteText(range.index, "Uploading image…".length);
+        toast("Image upload failed: " + err.message);
+      }
+    });
+    fileInput.click();
+  });
+
+  // Import a .docx file: converts it to HTML (headings, bold/italic,
+  // lists, tables and embedded images all carry over) and drops that
+  // straight into the editor in place of whatever's there. Embedded
+  // images are uploaded to Storage during the conversion, same as
+  // images inserted by hand, rather than saved as base64.
+  const importInput = $("#postImportDocx", overlay);
+  const importStatus = $("#importDocxStatus", overlay);
+  importInput.addEventListener("change", async () => {
+    const file = importInput.files[0];
+    if (!file) return;
+    if (typeof mammoth === "undefined") {
+      importStatus.textContent = "Document import isn't available right now, please try again shortly.";
+      return;
+    }
+    importStatus.textContent = "Converting document…";
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      let imgCounter = 0;
+      const result = await mammoth.convertToHtml({ arrayBuffer }, {
+        convertImage: mammoth.images.imgElement((image) =>
+          image.read("base64").then(async (base64) => {
+            const byteChars = atob(base64);
+            const byteNumbers = new Array(byteChars.length);
+            for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+            const blob = new Blob([new Uint8Array(byteNumbers)], { type: image.contentType || "image/png" });
+            imgCounter++;
+            const ext = (image.contentType || "image/png").split("/")[1] || "png";
+            const storageRef = ref(storage, `blogContent/${Date.now()}-docx-${imgCounter}.${ext}`);
+            await uploadBytes(storageRef, blob);
+            const url = await getDownloadURL(storageRef);
+            return { src: url };
+          })
+        ),
+      });
+      quill.root.innerHTML = result.value;
+      hiddenContent.value = quill.root.innerHTML;
+
+      // Nice-to-have: suggest an excerpt from the first bit of imported
+      // text, only if the admin hasn't already written one.
+      const excerptField = form.querySelector('textarea[name=excerpt]');
+      if (excerptField && !excerptField.value.trim()) {
+        const plain = quill.getText().trim().replace(/\s+/g, " ");
+        if (plain) excerptField.value = plain.slice(0, 160) + (plain.length > 160 ? "…" : "");
+      }
+
+      const warnings = result.messages && result.messages.length
+        ? ` (${result.messages.length} minor formatting note${result.messages.length === 1 ? "" : "s"}, styling that doesn't map to the blog may have been simplified.)`
+        : "";
+      importStatus.textContent = `Document imported into the editor below. Review it, then publish when ready.${warnings}`;
+      toast("Document imported.");
+    } catch (err) {
+      console.error(err);
+      importStatus.textContent = "Couldn't import that document: " + err.message;
+    } finally {
+      importInput.value = "";
+    }
+  });
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -977,6 +1193,7 @@ function openPopupModal(p) {
   const overlay = openModal(popupFormHTML(p || {}));
   $(".admin-modal-close", overlay).addEventListener("click", () => closeModal(overlay));
   const form = $("#popupForm", overlay);
+  wireCropOnSelect(form.querySelector('input[name=image]'));
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const status = $("#popupFormStatus", overlay);

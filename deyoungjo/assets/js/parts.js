@@ -7,7 +7,7 @@
 // =====================================================================
 import { db, waLink } from "./firebase-config.js";
 import {
-  collection, query, where, orderBy, limit as fbLimit, getDocs, doc, getDoc
+  collection, query, where, orderBy, limit as fbLimit, getDocs, doc, getDoc, startAfter
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 import { wireCartButtons } from "./cart.js";
 
@@ -129,3 +129,111 @@ export async function loadPartDetails(id) {
   if (!snap.exists()) return null;
   return { id: snap.id, ...snap.data() };
 }
+
+/* ---------------- Paginated listing ("Load more") ----------------
+   Same reasoning as cars.js's createCarLoader: a "Load more" button
+   backed by Firestore cursors, since the spare parts catalogue can grow
+   to hundreds of items too. The "compatibility" search is always a
+   client-side filter (Firestore can't do partial-text search without
+   extra tooling), so this keeps fetching batches until one yields a
+   result or the collection is exhausted.
+-------------------------------------------------------------------- */
+export function createPartLoader(containerId, moreButtonId, pageSize = 24) {
+  const el = document.getElementById(containerId);
+  const moreBtn = document.getElementById(moreButtonId);
+  let cursor = null;
+  let filters = {};
+  let exhausted = false;
+  let loading = false;
+
+  function passesClientFilters(part) {
+    if (filters.maxPrice && !((part.price || 0) <= Number(filters.maxPrice))) return false;
+    if (filters.compatibility) {
+      const needle = filters.compatibility.trim().toLowerCase();
+      const hay = (part.compatibility || "").toLowerCase();
+      if (!hay.includes(needle) && !hay.includes("universal")) return false;
+    }
+    return true;
+  }
+
+  async function fetchRawBatch() {
+    const clauses = [where("status", "!=", "hidden")];
+    if (filters.category) clauses.push(where("category", "==", filters.category));
+    if (filters.condition) clauses.push(where("condition", "==", filters.condition));
+    let q = query(collection(db, "spareParts"), ...clauses, orderBy("createdAt", "desc"));
+    if (cursor) q = query(q, startAfter(cursor));
+    q = query(q, fbLimit(pageSize));
+    const snap = await getDocs(q);
+    const raw = [];
+    snap.forEach(d => raw.push({ id: d.id, ...d.data() }));
+    cursor = snap.docs.length ? snap.docs[snap.docs.length - 1] : cursor;
+    if (snap.docs.length < pageSize) exhausted = true;
+    return raw;
+  }
+
+  async function fetchFilteredBatch() {
+    let collected = [];
+    let guard = 0;
+    while (!collected.length && !exhausted && guard < 10) {
+      const raw = await fetchRawBatch();
+      collected = raw.filter(passesClientFilters);
+      guard++;
+    }
+    return collected;
+  }
+
+  async function reset(newFilters) {
+    filters = newFilters || {};
+    cursor = null;
+    exhausted = false;
+    loading = true;
+    el.innerHTML = skeletonCards(pageSize > 12 ? 12 : pageSize);
+    try {
+      const parts = await fetchFilteredBatch();
+      if (!parts.length) {
+        el.innerHTML = `<div class="tac" style="grid-column:1/-1;padding:40px 0;">
+          <p>No parts match right now. New stock is added weekly, so message us on WhatsApp and we'll help you find what you need.</p>
+          <a class="btn btn-wa" data-wa-message="Hi, I'm looking for a specific spare part and didn't see it listed on your site. Can you help?" href="#">Ask us on WhatsApp</a>
+        </div>`;
+        wireWhatsAppInline(el);
+        moreBtn.classList.add("hidden");
+      } else {
+        el.innerHTML = parts.map(partCardHTML).join("");
+        wireWhatsAppInline(el);
+        wireCartButtons(el);
+        moreBtn.classList.toggle("hidden", exhausted);
+      }
+    } catch (e) {
+      console.error(e);
+      el.innerHTML = `<p class="tac" style="grid-column:1/-1;">Couldn't load parts right now. Please refresh, or reach us directly on WhatsApp.</p>`;
+      moreBtn.classList.add("hidden");
+    } finally {
+      loading = false;
+    }
+  }
+
+  async function loadMore() {
+    if (loading || exhausted) return;
+    loading = true;
+    const originalLabel = moreBtn.textContent;
+    moreBtn.disabled = true; moreBtn.textContent = "Loading…";
+    try {
+      const parts = await fetchFilteredBatch();
+      if (parts.length) {
+        el.insertAdjacentHTML("beforeend", parts.map(partCardHTML).join(""));
+        wireWhatsAppInline(el);
+        wireCartButtons(el);
+      }
+      moreBtn.classList.toggle("hidden", exhausted);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      loading = false;
+      moreBtn.disabled = false; moreBtn.textContent = originalLabel;
+    }
+  }
+
+  if (moreBtn) moreBtn.addEventListener("click", loadMore);
+  return { reset, loadMore };
+}
+

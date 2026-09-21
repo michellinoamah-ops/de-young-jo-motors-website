@@ -42,6 +42,12 @@ service firebase.storage {
                     && request.resource.contentType.matches('image/.*');
     }
 
+    match /blogContent/{fileName} {
+      allow read: if true;
+      allow write: if isAdmin() && request.resource.size < 10 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*');
+    }
+
     match /popups/{popupId}/{fileName} {
       allow read: if true;
       allow write: if isAdmin() && request.resource.size < 10 * 1024 * 1024

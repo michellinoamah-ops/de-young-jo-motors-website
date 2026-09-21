@@ -89,6 +89,7 @@
   <button class="btn btn-gold" id="fApply">Apply filters</button>
 </div>
     <div class="grid grid-3" id="rentalCarsGrid"></div>
+    <div class="load-more-wrap"><button class="btn btn-ink btn-load-more hidden" id="rentalLoadMore">Load more rentals</button></div>
   </div>
 </section>
 <section class="section on-paper">
@@ -227,7 +228,7 @@
 <script type="module" src="assets/js/firebase-config.js"></script>
 <script type="module" src="assets/js/main.js"></script>
 <script type="module">
-  import { loadCars } from "./assets/js/cars.js";
+  import { createCarLoader } from "./assets/js/cars.js";
   function currentFilters(){
     return {
       type: "rental",
@@ -241,8 +242,9 @@
   if (p.get("category")) document.getElementById("fCategory").value = p.get("category");
   if (p.get("transmission")) document.getElementById("fTransmission").value = p.get("transmission");
   if (p.get("maxPrice")) document.getElementById("fPrice").value = p.get("maxPrice");
-  loadCars("rentalCarsGrid", currentFilters());
-  document.getElementById("fApply").addEventListener("click", () => loadCars("rentalCarsGrid", currentFilters()));
+  const loader = createCarLoader("rentalCarsGrid", "rentalLoadMore");
+  loader.reset(currentFilters());
+  document.getElementById("fApply").addEventListener("click", () => loader.reset(currentFilters()));
 </script>
 </body>
 </html>

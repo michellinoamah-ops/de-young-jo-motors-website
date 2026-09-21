@@ -413,6 +413,71 @@ featured: boolean
 createdAt: timestamp
 ```
 
+## 11g. Scaling to hundreds of listings, the blog fix, and a crop tool
+
+- **Pagination ("Load more").** Cars for Sale, Used Cars, Car Rental and
+  Spare Parts no longer load every matching listing at once, they load
+  24 at a time with a **Load more** button beneath the grid. This is
+  what makes it practical to list hundreds of vehicles: without it,
+  browsing with no filters applied would fetch and render everything in
+  the catalogue on every visit, which gets slow and burns through
+  Firestore's free daily read quota fast once you're past a hundred or
+  so listings. A "Used only" or "max price" filter is applied after
+  fetching each batch (Firestore can't combine those with the other
+  filters directly), so if a batch of 24 turns up nothing after
+  filtering, it automatically fetches the next batch rather than
+  showing a false "no results."
+- **Admin tables got a search box** (Cars & Rentals, Spare Parts) for
+  the same reason: scrolling through hundreds of rows to find one car
+  stops being practical fast. Type a brand, model, year, part name or
+  category and the table filters instantly; a small note under each
+  table shows how many listings matched out of the total.
+- **The blog now has a black background**, article pages and the
+  listing page both, so long articles read the way a dark, premium
+  automotive brand should, rather than switching to a bright page
+  partway through the site. If you'd already written posts before this
+  update, they'll display correctly now too, nothing needs
+  re-typing, unless you specifically picked a dark text colour by hand
+  in the editor, more on that below.
+- **The admin's article editor now matches that black background.**
+  This was the real fix behind "text not showing well": the editor
+  used to be a white box, so default (unstyled) text looked fine while
+  writing, then turned invisible once published on a black page. The
+  editor is dark now, so what you see while writing is what actually
+  publishes. If you use the text colour tool, the editor will warn you
+  in a note that a dark colour will disappear on the black page, pick
+  a light one instead.
+- **A crop tool now appears on every photo upload in the dashboard**:
+  car photos, spare part photos, popup images, blog cover images, and
+  any image inserted inside a blog post's body. Pick a photo and a
+  "Crop photo" step appears with Free, Square, 4:3 and 16:9 options
+  before it's used, "Skip cropping" uses the original as-is. Images
+  inserted into an article body are uploaded to Firebase Storage after
+  cropping (not embedded directly in the post), keeping each blog
+  post's saved data small.
+
+## 11h. Blog alignment fix, and importing Word documents
+
+- **The real cause of misaligned blog text**: centring or right-aligning
+  a paragraph in the editor saved it using a CSS class
+  (`ql-align-center`) that only means anything if Quill's own
+  stylesheet is loaded to interpret it, and the public blog page never
+  loads it. So alignment looked right in the editor and silently
+  reverted to plain left-aligned text once published. Alignment now
+  saves as real inline CSS instead, so it matches on both sides. This
+  fixes it for new edits going forward; if a post written before this
+  update used centring or right-alignment, open it, reapply alignment
+  to the affected paragraph(s), and save again.
+- **Import a Word document (.docx)** straight into a blog post: Admin →
+  Blog → Add/Edit post has an "Import from a Word document" field above
+  the editor. Headings, bold/italic, bullet and numbered lists, tables
+  and embedded images all carry over, images are uploaded to Storage
+  during the import rather than saved as base64, keeping the post
+  small. It replaces whatever's currently in the editor, so review and
+  adjust after importing, then publish as usual. PDFs and the older
+  `.doc` format aren't supported, Word can save any document as `.docx`
+  first if needed.
+
 ## 12. Data model reference (Firestore)
 
 **cars**

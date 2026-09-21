@@ -276,6 +276,10 @@ input,textarea,select{font-family:inherit;font-size:1rem;}
 }
 @media (max-width:980px){.filter-bar{grid-template-columns:repeat(2,1fr);}}
 
+/* ---------- Load more ---------- */
+.load-more-wrap{display:flex;justify-content:center;margin-top:36px;}
+.btn-load-more{min-width:200px;}
+
 /* ---------- Forms ---------- */
 .form-field{margin-bottom:18px;}
 .form-field label{display:block;font-weight:600;font-size:.88rem;margin-bottom:7px;}
@@ -420,12 +424,24 @@ input,textarea,select{font-family:inherit;font-size:1rem;}
 .blog-cats button.active{background:var(--ink);color:var(--gold-light);border-color:var(--ink);}
 
 /* ---------- Blog post: readable long-form typography ---------- */
-.post-body{font-size:1.08rem;line-height:1.78;color:var(--ink);}
+.post-body{font-size:1.08rem;line-height:1.78;color:var(--text-dark-bg);}
 .post-body::after{content:"";display:table;clear:both;}
-.post-body p{margin:0 0 1.4em;}
-.post-body h2,.post-body h3{font-family:var(--font-display);margin:1.6em 0 .6em;}
-.post-body blockquote{border-left:3px solid var(--gold);padding-left:22px;margin:1.8em 0;font-size:1.2rem;font-style:italic;color:var(--steel);}
+.post-body p{margin:0 0 1.4em;color:var(--steel-light);}
+.post-body h1,.post-body h2,.post-body h3,.post-body h4,.post-body h5,.post-body h6{font-family:var(--font-display);margin:1.6em 0 .6em;color:#fff;}
+.post-body h1{font-size:1.9rem;}
+.post-body h2{font-size:1.55rem;}
+.post-body h3{font-size:1.3rem;}
+.post-body h4,.post-body h5,.post-body h6{font-size:1.1rem;font-family:var(--font-head);}
+.post-body strong{color:#fff;}
+.post-body blockquote{border-left:3px solid var(--gold);padding-left:22px;margin:1.8em 0;font-size:1.2rem;font-style:italic;color:var(--steel-light);}
 .post-body ul,.post-body ol{padding-left:1.4em;margin-bottom:1.4em;}
+.post-body li{margin-bottom:.4em;}
+/* Imported Word documents commonly bring tables; keep them legible on
+   the dark background rather than an unstyled, borderless mess. */
+.post-body table{width:100%;border-collapse:collapse;margin:1.6em 0;font-size:.95rem;}
+.post-body th,.post-body td{border:1px solid var(--line-dark);padding:10px 12px;text-align:left;}
+.post-body th{background:var(--ink-soft);color:#fff;}
+.post-body hr{border:0;border-top:1px solid var(--line-dark);margin:2em 0;}
 /* Images inserted through the admin's editor carry their own inline width
    (from dragging a resize handle) and sometimes a float (from its
    left/centre/right placement tool). max-width just keeps whatever size
@@ -438,7 +454,7 @@ input,textarea,select{font-family:inherit;font-size:1rem;}
 .post-body img[style*="float: right"],.post-body img[style*="float:right"]{
   margin:6px 0 16px 24px;display:inline-block;
 }
-.post-body a{color:var(--gold-dim);text-decoration:underline;}
+.post-body a{color:var(--gold-light);text-decoration:underline;}
 
 /* ---------- Comments (blog) & reviews (cars) ---------- */
 .comment-item,.review-item{padding:20px 0;border-bottom:1px solid var(--line);}

@@ -92,6 +92,7 @@
       <button class="btn btn-gold" id="ppApply">Apply filters</button>
     </div>
     <div class="grid grid-3" id="partsGrid"></div>
+    <div class="load-more-wrap"><button class="btn btn-ink btn-load-more hidden" id="partsLoadMore">Load more parts</button></div>
   </div>
 </section>
 
@@ -198,7 +199,7 @@
 <script type="module" src="assets/js/firebase-config.js"></script>
 <script type="module" src="assets/js/main.js"></script>
 <script type="module">
-  import { loadParts } from "./assets/js/parts.js";
+  import { createPartLoader } from "./assets/js/parts.js";
   function currentFilters(){
     return {
       category: document.getElementById("ppCategory").value || undefined,
@@ -207,8 +208,9 @@
       maxPrice: document.getElementById("ppPrice").value || undefined,
     };
   }
-  loadParts("partsGrid", currentFilters());
-  document.getElementById("ppApply").addEventListener("click", () => loadParts("partsGrid", currentFilters()));
+  const loader = createPartLoader("partsGrid", "partsLoadMore");
+  loader.reset(currentFilters());
+  document.getElementById("ppApply").addEventListener("click", () => loader.reset(currentFilters()));
 </script>
 </body>
 </html>
