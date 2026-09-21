@@ -94,6 +94,7 @@ requireAdmin((user) => {
   initSidebar();
   initOverview();
   initCars();
+  initParts();
   initBlog();
   initEnquiries();
   initReviewsComments();
@@ -109,7 +110,7 @@ function initSidebar() {
   const buttons = $$("#adminNav button");
   const sections = $$(".admin-section");
   const titleMap = {
-    overview: "Overview", cars: "Cars & Rentals", blog: "Blog",
+    overview: "Overview", cars: "Cars & Rentals", parts: "Spare Parts", blog: "Blog",
     enquiries: "Enquiries", reviews: "Reviews & Comments", affiliates: "Affiliate Applications",
     popups: "Popups & Offers", settings: "Settings"
   };
@@ -128,6 +129,7 @@ function initSidebar() {
       show(btn.dataset.jump);
       const openId = btn.dataset.open;
       if (openId === "addCar") $("#btnAddCar").click();
+      if (openId === "addPart") $("#btnAddPart").click();
       if (openId === "addPost") $("#btnAddPost").click();
       if (openId === "addPopup") $("#btnAddPopup").click();
     });
@@ -144,6 +146,7 @@ function initOverview() {
     $("#statCars").textContent = sale;
     $("#statRentals").textContent = rental;
   });
+  getDocs(collection(db, "spareParts")).then(snap => $("#statParts").textContent = snap.size);
   onSnapshot(query(collection(db, "enquiries"), orderBy("createdAt", "desc")), snap => {
     let unread = 0; const rows = [];
     snap.forEach(d => { const e = d.data(); if (e.status === "new") unread++; rows.push({ id: d.id, ...e }); });
@@ -212,9 +215,9 @@ function carFormHTML(car = {}) {
       <div class="form-field"><label>Features (comma separated)</label><input name="features" value="${features}" placeholder="Air conditioning, Reverse camera, Alloy wheels"></div>
       <div class="form-field">
         <label>Photos</label>
-        <div class="image-input-list" id="carImagePreview">${(car.images||[]).map(u=>`<img src="${u}">`).join("")}</div>
+        <div class="image-input-list" id="carImagePreview"></div>
         <input type="file" name="images" multiple accept="image/*">
-        <p class="form-note">Upload one or more photos. Uploading new ones adds to existing photos.</p>
+        <p class="form-note">The first photo (marked "Cover") is the one shown on listing pages. Click the star on any photo to make it the cover, or the &times; to remove it. New uploads are added to the end, then you can promote one to cover.</p>
       </div>
       <div class="form-row">
         <div class="form-field"><label>Status</label>
@@ -268,6 +271,40 @@ function openCarModal(car) {
   const overlay = openModal(carFormHTML(car || {}));
   $(".admin-modal-close", overlay).addEventListener("click", () => closeModal(overlay));
   const form = $("#carForm", overlay);
+
+  // Mutable working copy of the saved photo URLs, so the admin can reorder
+  // (promote one to "cover") or remove one before saving, independent of
+  // whatever new files they're about to upload.
+  let currentImages = [...(car && car.images || [])];
+  const pendingDeletes = [];
+  const previewEl = $("#carImagePreview", overlay);
+
+  function renderImagePreview() {
+    previewEl.innerHTML = currentImages.map((url, i) => `
+      <div class="img-thumb${i === 0 ? " is-cover" : ""}" data-idx="${i}">
+        <img src="${url}">
+        <div class="thumb-actions">
+          <button type="button" class="btn-star" data-cover="${i}" title="Make cover photo">&#9733;</button>
+          <button type="button" class="btn-remove" data-remove-img="${i}" title="Remove photo">&times;</button>
+        </div>
+        ${i === 0 ? '<div class="cover-badge">COVER</div>' : ""}
+      </div>`).join("") || `<p class="muted" style="font-size:.85rem;">No photos yet, upload at least one below.</p>`;
+
+    $$("[data-cover]", previewEl).forEach(b => b.addEventListener("click", () => {
+      const i = Number(b.dataset.cover);
+      const [chosen] = currentImages.splice(i, 1);
+      currentImages.unshift(chosen);
+      renderImagePreview();
+    }));
+    $$("[data-remove-img]", previewEl).forEach(b => b.addEventListener("click", () => {
+      const i = Number(b.dataset.removeImg);
+      const [removed] = currentImages.splice(i, 1);
+      if (removed) pendingDeletes.push(removed);
+      renderImagePreview();
+    }));
+  }
+  renderImagePreview();
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const status = $("#carFormStatus", overlay);
@@ -296,13 +333,19 @@ function openCarModal(car) {
         const docRef = await addDoc(collection(db, "cars"), payload);
         id = docRef.id;
       }
-      if (files.length) {
-        const uploaded = await uploadFiles(files, `cars/${id}`);
-        payload.images = [...(car && car.images || []), ...uploaded];
-      } else if (car) {
-        payload.images = car.images || [];
-      }
+      let uploaded = [];
+      if (files.length) uploaded = await uploadFiles(files, `cars/${id}`);
+      // Whatever's left in currentImages (after any removes/reordering) comes
+      // first, in that order, with freshly uploaded photos appended after.
+      payload.images = [...currentImages, ...uploaded];
       await setDoc(doc(db, "cars", id), payload, { merge: true });
+
+      // Best-effort cleanup of removed photos in Storage; a failure here
+      // (e.g. already gone) shouldn't block the save that already succeeded.
+      for (const url of pendingDeletes) {
+        try { await deleteObject(ref(storage, url)); } catch (e) { console.warn("Couldn't delete old photo:", e.message); }
+      }
+
       toast(car ? "Vehicle updated." : "Vehicle added.");
       closeModal(overlay);
     } catch (err) {
@@ -315,8 +358,185 @@ function openCarModal(car) {
 }
 
 /* =====================================================================
+   SPARE PARTS
+===================================================================== */
+function partFormHTML(part = {}) {
+  const isEdit = !!part.id;
+  return `
+    <button class="admin-modal-close">&times;</button>
+    <h3>${isEdit ? "Edit spare part" : "Add spare part"}</h3>
+    <form id="partForm">
+      <div class="form-field"><label>Part name</label><input name="name" value="${part.name||''}" placeholder="e.g. Brake Pads, Front Set" required></div>
+      <div class="form-row">
+        <div class="form-field"><label>Category</label>
+          <select name="category">
+            ${["Engine Parts","Brakes","Suspension & Steering","Electrical","Body & Exterior","Interior & Trim","Tyres","Battery","Lubricants & Fluids","Filters","Transmission","Cooling System","Other"].map(c=>`<option ${part.category===c?"selected":""}>${c}</option>`).join("")}
+          </select>
+        </div>
+        <div class="form-field"><label>Condition</label>
+          <select name="condition">${["New","Used","Refurbished"].map(c=>`<option ${part.condition===c?"selected":""}>${c}</option>`).join("")}</select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field"><label>Price (₦)</label><input name="price" type="number" value="${part.price||''}" required></div>
+        <div class="form-field"><label>Compatible with</label><input name="compatibility" value="${part.compatibility||''}" placeholder="e.g. Toyota Camry 2010-2018, or Universal"></div>
+      </div>
+      <div class="form-field"><label>Description</label><textarea name="description">${part.description||''}</textarea></div>
+      <div class="form-field">
+        <label>Photos</label>
+        <div class="image-input-list" id="partImagePreview"></div>
+        <input type="file" name="images" multiple accept="image/*">
+        <p class="form-note">The first photo (marked "Cover") is the one shown on listing pages. Click the star on any photo to make it the cover, or the &times; to remove it.</p>
+      </div>
+      <div class="form-row">
+        <div class="form-field"><label>Status</label>
+          <select name="status">${["available","out of stock","hidden"].map(s=>`<option ${part.status===s?"selected":""}>${s}</option>`).join("")}</select>
+        </div>
+        <div class="form-field" style="display:flex;align-items:center;gap:10px;margin-top:26px;">
+          <label class="switch"><input type="checkbox" name="featured" ${part.featured?"checked":""}><span class="slider"></span></label>
+          <label style="margin:0;">Feature on homepage</label>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-gold btn-block">${isEdit ? "Save changes" : "Add spare part"}</button>
+      <div id="partFormStatus" class="form-status"></div>
+    </form>`;
+}
+
+function initParts() {
+  $("#btnAddPart").addEventListener("click", () => openPartModal());
+  onSnapshot(query(collection(db, "spareParts"), orderBy("createdAt", "desc")), snap => {
+    const rows = [];
+    snap.forEach(d => rows.push({ id: d.id, ...d.data() }));
+    $("#partsTableBody").innerHTML = rows.length ? rows.map(p => `
+      <tr>
+        <td><img class="thumb" src="${(p.images&&p.images[0])||''}" onerror="this.style.opacity=0"></td>
+        <td>${p.name||''}</td>
+        <td><span class="pill pill-gray">${p.category||''}</span></td>
+        <td>₦${Number(p.price||0).toLocaleString()}</td>
+        <td><span class="pill ${p.status==='available'?'pill-green':'pill-red'}">${p.status||'available'}</span></td>
+        <td><label class="switch"><input type="checkbox" data-feat-part="${p.id}" ${p.featured?'checked':''}><span class="slider"></span></label></td>
+        <td class="row-actions">
+          <button class="btn btn-sm btn-outline" data-edit-part="${p.id}">Edit</button>
+          <button class="btn btn-sm btn-danger" data-del-part="${p.id}">Delete</button>
+        </td>
+      </tr>`).join("") : `<tr><td colspan="7" class="empty-state">No spare parts yet, add your first one.</td></tr>`;
+
+    $$('[data-feat-part]').forEach(cb => cb.addEventListener("change", () =>
+      updateDoc(doc(db, "spareParts", cb.dataset.featPart), { featured: cb.checked })));
+    $$('[data-edit-part]').forEach(b => b.addEventListener("click", () => {
+      const part = rows.find(r => r.id === b.dataset.editPart);
+      openPartModal(part);
+    }));
+    $$('[data-del-part]').forEach(b => b.addEventListener("click", async () => {
+      if (!confirm("Delete this spare part listing? This can't be undone.")) return;
+      await deleteDoc(doc(db, "spareParts", b.dataset.delPart));
+      toast("Spare part deleted.");
+    }));
+  });
+}
+
+function openPartModal(part) {
+  const overlay = openModal(partFormHTML(part || {}));
+  $(".admin-modal-close", overlay).addEventListener("click", () => closeModal(overlay));
+  const form = $("#partForm", overlay);
+
+  let currentImages = [...(part && part.images || [])];
+  const pendingDeletes = [];
+  const previewEl = $("#partImagePreview", overlay);
+
+  function renderImagePreview() {
+    previewEl.innerHTML = currentImages.map((url, i) => `
+      <div class="img-thumb${i === 0 ? " is-cover" : ""}" data-idx="${i}">
+        <img src="${url}">
+        <div class="thumb-actions">
+          <button type="button" class="btn-star" data-cover="${i}" title="Make cover photo">&#9733;</button>
+          <button type="button" class="btn-remove" data-remove-img="${i}" title="Remove photo">&times;</button>
+        </div>
+        ${i === 0 ? '<div class="cover-badge">COVER</div>' : ""}
+      </div>`).join("") || `<p class="muted" style="font-size:.85rem;">No photos yet, upload at least one below.</p>`;
+
+    $$("[data-cover]", previewEl).forEach(b => b.addEventListener("click", () => {
+      const i = Number(b.dataset.cover);
+      const [chosen] = currentImages.splice(i, 1);
+      currentImages.unshift(chosen);
+      renderImagePreview();
+    }));
+    $$("[data-remove-img]", previewEl).forEach(b => b.addEventListener("click", () => {
+      const i = Number(b.dataset.removeImg);
+      const [removed] = currentImages.splice(i, 1);
+      if (removed) pendingDeletes.push(removed);
+      renderImagePreview();
+    }));
+  }
+  renderImagePreview();
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const status = $("#partFormStatus", overlay);
+    const btn = form.querySelector("button[type=submit]");
+    btn.disabled = true; btn.textContent = "Saving…";
+    try {
+      const fd = new FormData(form);
+      const payload = {
+        name: fd.get("name"), category: fd.get("category"), condition: fd.get("condition"),
+        price: fd.get("price") ? Number(fd.get("price")) : null,
+        compatibility: fd.get("compatibility"), description: fd.get("description"),
+        status: fd.get("status"), featured: fd.get("featured") === "on",
+      };
+      const files = form.querySelector('input[name=images]').files;
+      let id = part && part.id;
+      if (!id) {
+        payload.createdAt = serverTimestamp();
+        payload.images = [];
+        const docRef = await addDoc(collection(db, "spareParts"), payload);
+        id = docRef.id;
+      }
+      let uploaded = [];
+      if (files.length) uploaded = await uploadFiles(files, `spareParts/${id}`);
+      payload.images = [...currentImages, ...uploaded];
+      await setDoc(doc(db, "spareParts", id), payload, { merge: true });
+
+      for (const url of pendingDeletes) {
+        try { await deleteObject(ref(storage, url)); } catch (e) { console.warn("Couldn't delete old photo:", e.message); }
+      }
+
+      toast(part ? "Spare part updated." : "Spare part added.");
+      closeModal(overlay);
+    } catch (err) {
+      console.error(err);
+      status.textContent = "Couldn't save this spare part: " + err.message;
+      status.className = "form-status show err";
+      btn.disabled = false; btn.textContent = part ? "Save changes" : "Add spare part";
+    }
+  });
+}
+
+/* =====================================================================
    BLOG
 ===================================================================== */
+let quillExtrasRegistered = false;
+function registerQuillExtras() {
+  if (quillExtrasRegistered || typeof Quill === "undefined") return;
+  quillExtrasRegistered = true;
+
+  // Use the STYLE-based attributors (not Quill's default class-based ones)
+  // so font/size are saved as real inline CSS in the article's HTML. That
+  // matters because the public blog page renders this HTML directly and
+  // never loads Quill's own stylesheet, so a class like "ql-font-serif"
+  // would do nothing there, while inline "font-family: Fraunces" always works.
+  const FontStyle = Quill.import("attributors/style/font");
+  FontStyle.whitelist = ["Inter", "Fraunces", "Bricolage Grotesque", "Georgia", "Arial", "Courier New"];
+  Quill.register(FontStyle, true);
+
+  const SizeStyle = Quill.import("attributors/style/size");
+  SizeStyle.whitelist = ["14px", "16px", "18px", "20px", "24px", "32px"];
+  Quill.register(SizeStyle, true);
+
+  if (window.ImageResize) {
+    Quill.register("modules/imageResize", window.ImageResize.default || window.ImageResize);
+  }
+}
+
 function postFormHTML(post = {}) {
   const isEdit = !!post.id;
   return `
@@ -346,6 +566,24 @@ function postFormHTML(post = {}) {
             <select class="ql-header"><option value="2"></option><option value="3"></option><option selected></option></select>
           </span>
           <span class="ql-formats">
+            <select class="ql-font">
+              <option value="Inter" selected></option>
+              <option value="Fraunces"></option>
+              <option value="Bricolage Grotesque"></option>
+              <option value="Georgia"></option>
+              <option value="Arial"></option>
+              <option value="Courier New"></option>
+            </select>
+            <select class="ql-size">
+              <option value="14px"></option>
+              <option value="16px" selected></option>
+              <option value="18px"></option>
+              <option value="20px"></option>
+              <option value="24px"></option>
+              <option value="32px"></option>
+            </select>
+          </span>
+          <span class="ql-formats">
             <button class="ql-bold"></button><button class="ql-italic"></button><button class="ql-underline"></button>
           </span>
           <span class="ql-formats">
@@ -363,6 +601,7 @@ function postFormHTML(post = {}) {
         </div>
         <div id="postQuillEditor"></div>
         <textarea name="content" id="postContentHidden" style="display:none;">${post.content||''}</textarea>
+        <p class="form-note">Click an image after inserting it to drag-resize it from its corners, and use its small floating toolbar to place it left, right, or centre with text wrapping around it.</p>
       </div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
         <label class="switch"><input type="checkbox" name="published" ${post.published!==false?"checked":""}><span class="slider"></span></label>
@@ -410,12 +649,18 @@ function openPostModal(post) {
   $(".admin-modal-close", overlay).addEventListener("click", () => closeModal(overlay));
   const form = $("#postForm", overlay);
 
-  // Quill rich-text editor: bold, headings, colour, alignment, lists, links.
+  registerQuillExtras();
+
+  // Quill rich-text editor: bold, headings, font, size, colour, alignment,
+  // lists, links, and a resizable/repositionable image tool.
   // The hidden textarea keeps the current HTML in sync so FormData can read it.
   const hiddenContent = $("#postContentHidden", overlay);
   const quill = new Quill(overlay.querySelector("#postQuillEditor"), {
     theme: "snow",
-    modules: { toolbar: overlay.querySelector("#postQuillToolbar") },
+    modules: {
+      toolbar: overlay.querySelector("#postQuillToolbar"),
+      imageResize: window.ImageResize ? { modules: ["Resize", "DisplaySize", "Toolbar"] } : undefined,
+    },
     placeholder: "Write the article here…",
   });
   quill.root.innerHTML = hiddenContent.value || "";

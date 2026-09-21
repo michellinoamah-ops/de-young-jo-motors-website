@@ -10,6 +10,8 @@ full-featured admin dashboard.
 index.html                Homepage
 cars-for-sale.html        Cars for sale, filterable listing (new + used)
 used-cars.html            Used cars only, certified pre-owned listing
+spare-parts.html          Spare parts listing, filterable by category/condition
+spare-part-details.html   Single spare part page (?id=<partId>)
 car-rental.html           Car rental, filterable listing
 car-details.html          Single vehicle page (?id=<carId>)
 about.html                About us
@@ -27,6 +29,9 @@ assets/css/admin.css      Admin panel styling
 assets/img/gallery/       Background/hero photography used across the site
 assets/js/*.js            All site + admin logic (ES modules)
 assets/js/cart.js         "Add to cart" shortlist (localStorage, no payment)
+assets/js/reviews.js      Car star-rating reviews (submit + display)
+assets/js/parts.js        Spare parts listing/details rendering
+assets/js/part-details.js Spare part details page logic
 firebase/firestore.rules
 firebase/storage.rules
 firebase/firestore.indexes.json
@@ -278,6 +283,135 @@ turned up a few conversion patterns worth borrowing, now built in:
 - **WhatsApp button** now pulses with an outward "ping" ring (not just a
   glow) so it reads as an actionable, tappable element rather than
   static decoration.
+
+## 11d. Physical address & business registration (trust signals)
+
+Real addresses build trust that a phone number alone can't, so both
+locations from your signage are now on the site, not just in a settings
+field:
+
+- **Footer** (every page): a "Visit us" column with both addresses, and
+  the business registration number (RC 7015497) in the footer's bottom
+  line.
+- **Contact page**: a dedicated "Visit us in person" section with a card
+  per office (Head Office and Branch Office), each with a "Get
+  directions" link that opens Google Maps already searching for that
+  exact address, plus a verified-registration badge. The embedded map
+  now points at the Head Office address instead of a generic search.
+- **About page**: the same two office cards and registration badge,
+  under a "Visit our offices" section.
+- **Homepage structured data**: the JSON-LD now carries the real Head
+  Office address, the Branch Office as a `department`, and the RC number
+  as an `identifier`, so Google can associate the business with a real
+  place rather than just a country.
+
+If either address or the RC number ever changes, search for `OFFICES =`
+near the top of the site's page-building logic (or, since you'll likely
+be handed a finished folder rather than the generator script, do a
+find-and-replace for the old address text across `contact.html`,
+`about.html` and the shared footer block repeated in every page).
+
+## 11e. Blog redesign, comments, car reviews, rich text editor, notifications
+
+A big update covering six things you asked for together:
+
+- **Blog: modern editorial layout, not cards.** The blog listing now
+  shows one large featured post up top (image one side, title and
+  excerpt the other) with the rest as a plain scrolling list of rows,
+  the way a magazine or newsletter reads rather than a grid of boxes.
+  Article pages use larger, more readable typography with an estimated
+  reading time next to the date.
+- **Rich text editor in Admin → Blog.** The "New post" / "Edit post"
+  form now has a real toolbar (Bold, Italic, Underline, headings, text
+  colour, highlight colour, alignment, lists, blockquote, links,
+  images) instead of a plain text box. It's powered by an open-source
+  editor called Quill, loaded from a CDN, no account or extra setup
+  needed. What you format is exactly what visitors see on the article
+  page.
+- **Comments on every blog post.** Visitors can leave a name + comment
+  at the bottom of any article. Nothing appears publicly until you
+  approve it from **Admin → Reviews & Comments**.
+- **Star-rated reviews on every car's page.** Each vehicle's details
+  page now has a 1–5 star picker plus a message field, an average
+  rating shown at the top, and the same approval flow as comments.
+  Whatever the person submits, they immediately see: **"Your review or
+  message has been sent for approval."**
+- **One moderation queue for both.** Admin → Reviews & Comments lists
+  blog comments and car reviews together, newest pending items first.
+  Each has **Approve** (goes live immediately), **Reject** (hidden from
+  the site but kept on record), and **Delete** (gone for good).
+- **Desktop notifications for admin.** The bell button at the top of
+  the dashboard turns pop-up notifications on or off. When on, and
+  while the dashboard is open in a browser tab, including a
+  minimised or background one, you'll get an alert the moment someone
+  submits a new enquiry, affiliate application, blog comment, or car
+  review. An in-dashboard toast also shows either way, so you won't
+  miss anything even before granting the browser permission.
+
+  **Being upfront about the limits of this:** this notifies you while
+  the dashboard tab is open somewhere on your device. It cannot wake up
+  a fully closed browser or a phone that's locked and not running
+  Chrome, because that requires a server-side push service (Firebase
+  Cloud Messaging via Cloud Functions), which isn't set up here since
+  it needs Firebase's paid Blaze plan. If you outgrow this later, the
+  upgrade path is: add a `firebase-messaging-sw.js` service worker,
+  request an FCM token per admin device, and write a small Cloud
+  Function that triggers on new documents in `enquiries`,
+  `blogComments`, `carReviews` and `affiliateApplications` to send that
+  push. That's a separate project on top of this one, not something to
+  attempt without a developer.
+
+Two new Firestore collections came with this (rules and indexes for
+both are already in `firebase/`):
+
+**blogComments**
+```
+postId (the blog post's slug), name, message
+status: "pending" | "approved" | "rejected"
+createdAt: timestamp
+```
+
+**carReviews**
+```
+carId, name, rating (1-5), message
+status: "pending" | "approved" | "rejected"
+createdAt: timestamp
+```
+
+## 11f. Spare Parts, and a broader business description
+
+Two more additions layered on top of everything above:
+
+- **Spare Parts is now a full second product line**, not just a mention.
+  It has its own listing page (`spare-parts.html`) with filters for
+  category, condition and a "search by vehicle" compatibility box, its
+  own details page (`spare-part-details.html`) with the same photo
+  slideshow and shortlist-cart button the car details page has, and its
+  own section in Admin (**Admin → Spare Parts**) with the same
+  cover-photo/reorder/remove controls as vehicle photos. It's a
+  separate Firestore collection (`spareParts`, documented below), with
+  its own security rules and indexes already included. The homepage,
+  main navigation, and footer all link to it, and the About page's new
+  "What we do" section lists it alongside the rest of the business.
+- **The site's description of the business is broader now**, matching
+  the fuller scope you described (motor vehicle dealer, spare parts and
+  accessories, sourcing and procurement, import and export, dealership
+  and agency work, maintenance, servicing, diagnostics and repair).
+  This shows up in a few places: the homepage title, meta description
+  and hero copy; a new "What we do" section on the About page listing
+  all eight service lines; and the homepage's structured data (the
+  JSON-LD Google reads), which now lists `AutoDealer`, `AutoPartsStore`
+  and `AutoRepair` as business types and includes every service as a
+  separate offer, rather than just "cars for sale" and "car rental."
+
+**spareParts**
+```
+name, category, compatibility, condition ("New"|"Used"|"Refurbished")
+price, description, images[]
+status: "available" | "out of stock" | "hidden"
+featured: boolean
+createdAt: timestamp
+```
 
 ## 12. Data model reference (Firestore)
 

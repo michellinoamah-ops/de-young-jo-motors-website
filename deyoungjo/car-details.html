@@ -35,6 +35,7 @@
       <a href="index.html">Home</a>
       <a href="cars-for-sale.html">Buy a Car</a>
       <a href="used-cars.html">Used Cars</a>
+      <a href="spare-parts.html">Spare Parts</a>
       <a href="car-rental.html">Rent a Car</a>
       <a href="blog.html">Blog</a>
       <a href="affiliate.html">Affiliate</a>
@@ -51,6 +52,7 @@
     <a href="index.html">Home</a>
       <a href="cars-for-sale.html">Buy a Car</a>
       <a href="used-cars.html">Used Cars</a>
+      <a href="spare-parts.html">Spare Parts</a>
       <a href="car-rental.html">Rent a Car</a>
       <a href="blog.html">Blog</a>
       <a href="affiliate.html">Affiliate</a>
@@ -71,8 +73,13 @@
     <div id="carStatusBanner" class="status-banner hidden"></div>
     <div class="split" style="align-items:flex-start;">
       <div>
-        <img id="galleryMain" class="gallery-main" src="" alt="">
-        <div id="galleryThumbs" class="gallery-thumbs"></div>
+        <div class="gallery-wrap" id="galleryWrap">
+          <img id="galleryMain" class="gallery-main" src="" alt="">
+          <button type="button" class="gallery-arrow prev" id="galleryPrev" aria-label="Previous photo">&#10094;</button>
+          <button type="button" class="gallery-arrow next" id="galleryNext" aria-label="Next photo">&#10095;</button>
+          <span class="gallery-count" id="galleryCount"></span>
+          <div class="gallery-dots" id="galleryDots"></div>
+        </div>
 
         <h3 style="margin-top:36px;">Description</h3>
         <p id="carDescription" class="muted"></p>
@@ -136,7 +143,7 @@
   </div>
 </div>
 
-<section class="section on-paper">
+<section class="section on-cream">
   <div class="container">
     <div class="section-head"><h2>You might also like</h2><p>Similar vehicles currently available.</p></div>
     <div class="grid grid-3" id="relatedCarsGrid"></div>
@@ -161,6 +168,7 @@
         <h4>Explore</h4>
         <a href="cars-for-sale.html">Cars for sale</a>
         <a href="used-cars.html">Used cars</a>
+        <a href="spare-parts.html">Spare parts</a>
         <a href="car-rental.html">Car rental</a>
         <a href="blog.html">Blog</a>
         <a href="affiliate.html">Become an affiliate</a>

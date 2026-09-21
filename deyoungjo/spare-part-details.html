@@ -3,21 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Blog | De Young Jo Motors</title>
-<meta name="description" content="Car buying guides, rental tips and maintenance advice from De Young Jo Motors, Nigeria's car sales and rental specialists.">
-<link rel="canonical" href="https://www.deyoungjomotors.com/blog.html">
+<title>Spare Part Details | De Young Jo Motors</title>
+<meta name="description" content="View full details, photos and pricing for this spare part from De Young Jo Motors, then enquire directly on WhatsApp.">
+<link rel="canonical" href="https://www.deyoungjomotors.com/spare-part-details.html">
 <meta name="robots" content="index, follow">
 <meta name="theme-color" content="#14120F">
 <link rel="icon" type="image/png" href="assets/img/logo.png">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="De Young Jo Motors">
-<meta property="og:title" content="Blog | De Young Jo Motors">
-<meta property="og:description" content="Car buying guides, rental tips and maintenance advice from De Young Jo Motors, Nigeria's car sales and rental specialists.">
+<meta property="og:title" content="Spare Part Details | De Young Jo Motors">
+<meta property="og:description" content="View full details, photos and pricing for this spare part from De Young Jo Motors, then enquire directly on WhatsApp.">
 <meta property="og:image" content="assets/img/logo.png">
-<meta property="og:url" content="https://www.deyoungjomotors.com/blog.html">
+<meta property="og:url" content="https://www.deyoungjomotors.com/spare-part-details.html">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Blog | De Young Jo Motors">
-<meta name="twitter:description" content="Car buying guides, rental tips and maintenance advice from De Young Jo Motors, Nigeria's car sales and rental specialists.">
+<meta name="twitter:title" content="Spare Part Details | De Young Jo Motors">
+<meta name="twitter:description" content="View full details, photos and pricing for this spare part from De Young Jo Motors, then enquire directly on WhatsApp.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -35,9 +35,9 @@
       <a href="index.html">Home</a>
       <a href="cars-for-sale.html">Buy a Car</a>
       <a href="used-cars.html">Used Cars</a>
-      <a href="spare-parts.html">Spare Parts</a>
+      <a href="spare-parts.html" class="active">Spare Parts</a>
       <a href="car-rental.html">Rent a Car</a>
-      <a href="blog.html" class="active">Blog</a>
+      <a href="blog.html">Blog</a>
       <a href="affiliate.html">Affiliate</a>
       <a href="about.html">About</a>
       <a href="contact.html">Contact</a>
@@ -52,9 +52,9 @@
     <a href="index.html">Home</a>
       <a href="cars-for-sale.html">Buy a Car</a>
       <a href="used-cars.html">Used Cars</a>
-      <a href="spare-parts.html">Spare Parts</a>
+      <a href="spare-parts.html" class="active">Spare Parts</a>
       <a href="car-rental.html">Rent a Car</a>
-      <a href="blog.html" class="active">Blog</a>
+      <a href="blog.html">Blog</a>
       <a href="affiliate.html">Affiliate</a>
       <a href="about.html">About</a>
       <a href="contact.html">Contact</a>
@@ -63,14 +63,56 @@
 
 <div class="page-head">
   <div class="container">
-    <div class="crumb"><a href="index.html">Home</a> / Blog</div>
-    <h1>Guides, tips &amp; news</h1>
-    <p style="color:var(--steel-light);max-width:60ch;">Buying guides, rental advice and maintenance tips from the De Young Jo Motors team.</p>
+    <div class="crumb"><a href="index.html">Home</a> / <a href="spare-parts.html">Spare Parts</a> / <span id="crumbPart">Part</span></div>
+    <h1 id="partTitle">Loading part&hellip;</h1>
   </div>
 </div>
-<section class="section on-bg-alt">
-  <div class="container" style="max-width:900px;">
-    <div id="blogGrid"></div>
+
+<section class="section" id="partDetailsRoot">
+  <div class="container">
+    <div id="partStatusBanner" class="status-banner hidden"></div>
+    <div class="split" style="align-items:flex-start;">
+      <div>
+        <div class="gallery-wrap" id="galleryWrap">
+          <img id="galleryMain" class="gallery-main" src="" alt="">
+          <button type="button" class="gallery-arrow prev" id="galleryPrev" aria-label="Previous photo">&#10094;</button>
+          <button type="button" class="gallery-arrow next" id="galleryNext" aria-label="Next photo">&#10095;</button>
+          <span class="gallery-count" id="galleryCount"></span>
+          <div class="gallery-dots" id="galleryDots"></div>
+        </div>
+
+        <h3 style="margin-top:36px;">Description</h3>
+        <p id="partDescription" class="muted"></p>
+      </div>
+      <div>
+        <div class="feature-card cut-tr-sm" style="position:sticky;top:100px;">
+          <span class="badge" id="partCategoryTag">Spare Part</span>
+          <h2 id="partPriceTag" style="margin-top:12px;font-size:2rem;"></h2>
+          <div id="partSpecsList" style="margin:14px 0 20px;"></div>
+          <div class="details-actions" style="flex-direction:column;">
+            <a id="partWaBtn" href="#" class="btn btn-wa btn-block">Enquire on WhatsApp</a>
+            <a href="tel:+2348062729739" class="btn btn-ink btn-block">Call +234 806 272 9739</a>
+            <button id="partCartBtn" class="btn btn-outline btn-block" data-label-add="+ Add to shortlist" data-label-added="&#10003; Added to shortlist">+ Add to shortlist</button>
+          </div>
+          <p class="form-note" style="margin-top:14px;">Confirm compatibility with your vehicle before ordering, we're happy to check for you.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="partNotFound" class="section hidden">
+  <div class="container tac">
+    <h2>We couldn't find that part</h2>
+    <p style="max-width:44ch;margin:0 auto 20px;">It may be out of stock, or the link is out of date.</p>
+    <a href="spare-parts.html" class="btn btn-ink">See all spare parts</a>
+  </div>
+</div>
+
+<section class="section on-cream">
+  <div class="container">
+    <div class="section-head"><h2>You might also need</h2><p>Similar parts currently available.</p></div>
+    <div class="grid grid-3" id="relatedPartsGrid"></div>
   </div>
 </section>
 
@@ -131,6 +173,6 @@
 <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
 <script type="module" src="assets/js/firebase-config.js"></script>
 <script type="module" src="assets/js/main.js"></script>
-<script type="module">import { loadPosts } from "./assets/js/blog.js"; loadPosts("blogGrid");</script>
+<script type="module" src="assets/js/part-details.js"></script>
 </body>
 </html>

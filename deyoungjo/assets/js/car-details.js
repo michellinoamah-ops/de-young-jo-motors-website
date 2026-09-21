@@ -44,19 +44,7 @@ function render(car) {
     : formatNaira(car.price);
 
   const images = (car.images && car.images.length) ? car.images : ["https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=1200&auto=format&fit=crop"];
-  const mainImg = document.getElementById("galleryMain");
-  mainImg.src = images[0];
-  mainImg.alt = name;
-  document.getElementById("galleryThumbs").innerHTML = images.map((src, i) =>
-    `<img src="${src}" alt="${name} photo ${i+1}" class="gallery-thumb" data-src="${src}" style="width:76px;height:56px;object-fit:cover;cursor:pointer;border:2px solid ${i===0?'var(--gold)':'transparent'};">`
-  ).join("");
-  document.getElementById("galleryThumbs").addEventListener("click", (e) => {
-    const t = e.target.closest(".gallery-thumb");
-    if (!t) return;
-    mainImg.src = t.getAttribute("data-src");
-    document.querySelectorAll(".gallery-thumb").forEach(el => el.style.borderColor = "transparent");
-    t.style.borderColor = "var(--gold)";
-  });
+  setupGallery(images, name);
 
   const specs = [
     ["Brand", car.brand], ["Model", car.model], ["Year", car.year],
@@ -100,6 +88,58 @@ function render(car) {
   // Reviews & star ratings for this specific vehicle
   loadCarReviews(car.id, "reviewsList", "reviewSummary");
   wireReviewForm(car.id, "reviewForm", "reviewStatus");
+}
+
+/**
+ * Turns the car's photo(s) into a slideshow: only one photo means a plain
+ * static image (no controls shown at all); two or more means arrows, dot
+ * indicators, and gentle auto-advance that pauses whenever the visitor
+ * interacts with it directly.
+ */
+function setupGallery(images, altBase) {
+  const mainImg = document.getElementById("galleryMain");
+  const wrap = document.getElementById("galleryWrap");
+  const prevBtn = document.getElementById("galleryPrev");
+  const nextBtn = document.getElementById("galleryNext");
+  const dotsEl = document.getElementById("galleryDots");
+  const countEl = document.getElementById("galleryCount");
+  let index = 0;
+  let timer = null;
+
+  function render() {
+    mainImg.src = images[index];
+    mainImg.alt = `${altBase} photo ${index + 1} of ${images.length}`;
+    if (dotsEl.children.length) {
+      [...dotsEl.children].forEach((d, i) => d.classList.toggle("active", i === index));
+    }
+    if (countEl) countEl.textContent = images.length > 1 ? `${index + 1} / ${images.length}` : "";
+  }
+
+  function goTo(i) {
+    index = (i + images.length) % images.length;
+    render();
+  }
+  function next() { goTo(index + 1); }
+  function prev() { goTo(index - 1); }
+
+  function restartAutoplay() {
+    clearInterval(timer);
+    if (images.length > 1) timer = setInterval(next, 4500);
+  }
+
+  if (images.length > 1) {
+    dotsEl.innerHTML = images.map((_, i) => `<button type="button" aria-label="Go to photo ${i+1}"></button>`).join("");
+    [...dotsEl.children].forEach((d, i) => d.addEventListener("click", () => { goTo(i); restartAutoplay(); }));
+    nextBtn.addEventListener("click", () => { next(); restartAutoplay(); });
+    prevBtn.addEventListener("click", () => { prev(); restartAutoplay(); });
+    wrap.addEventListener("mouseenter", () => clearInterval(timer));
+    wrap.addEventListener("mouseleave", restartAutoplay);
+    restartAutoplay();
+  } else {
+    prevBtn.style.display = "none";
+    nextBtn.style.display = "none";
+  }
+  render();
 }
 
 init();

@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="assets/css/admin.css">
 <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/quill-image-resize-module@3.0.0/image-resize.min.js"></script>
 </head>
 <body>
 <div class="admin-shell">
@@ -24,6 +25,7 @@
     <nav class="admin-nav" id="adminNav">
       <button data-section="overview" class="active"><span class="icon">&#9632;</span> Overview</button>
       <button data-section="cars"><span class="icon">&#128663;</span> Cars &amp; Rentals</button>
+      <button data-section="parts"><span class="icon">&#128295;</span> Spare Parts</button>
       <button data-section="blog"><span class="icon">&#128221;</span> Blog</button>
       <button data-section="enquiries"><span class="icon">&#9993;</span> Enquiries</button>
       <button data-section="reviews"><span class="icon">&#11088;</span> Reviews &amp; Comments</button>
@@ -56,6 +58,7 @@
         <div class="stat-grid">
           <div class="stat-card"><div class="n" id="statCars">–</div><div class="l">Cars for sale</div></div>
           <div class="stat-card"><div class="n" id="statRentals">–</div><div class="l">Rental vehicles</div></div>
+          <div class="stat-card"><div class="n" id="statParts">–</div><div class="l">Spare parts listed</div></div>
           <div class="stat-card"><div class="n" id="statEnquiries">–</div><div class="l">New enquiries</div></div>
           <div class="stat-card"><div class="n" id="statAffiliates">–</div><div class="l">Affiliate applications</div></div>
           <div class="stat-card"><div class="n" id="statPendingReviews">–</div><div class="l">Pending reviews &amp; comments</div></div>
@@ -64,6 +67,7 @@
           <div class="panel-head"><h3>Quick actions</h3></div>
           <div style="display:flex;gap:14px;flex-wrap:wrap;">
             <button class="btn btn-gold" data-jump="cars" data-open="addCar">+ Add a car listing</button>
+            <button class="btn btn-gold" data-jump="parts" data-open="addPart">+ Add a spare part</button>
             <button class="btn btn-ink" data-jump="blog" data-open="addPost">+ Write a blog post</button>
             <button class="btn btn-outline" data-jump="popups" data-open="addPopup">+ Create a popup</button>
           </div>
@@ -85,6 +89,22 @@
           <table class="admin-table">
             <thead><tr><th>Photo</th><th>Vehicle</th><th>Type</th><th>Price</th><th>Status</th><th>Featured</th><th>Actions</th></tr></thead>
             <tbody id="carsTableBody"><tr><td colspan="7" class="empty-state">Loading…</td></tr></tbody>
+          </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- SPARE PARTS -->
+      <section id="sec-parts" class="admin-section hidden">
+        <div class="panel-head" style="margin-bottom:16px;">
+          <h3>All spare parts</h3>
+          <button class="btn btn-gold" id="btnAddPart">+ Add spare part</button>
+        </div>
+        <div class="panel">
+          <div style="overflow-x:auto;">
+          <table class="admin-table">
+            <thead><tr><th>Photo</th><th>Part</th><th>Category</th><th>Price</th><th>Status</th><th>Featured</th><th>Actions</th></tr></thead>
+            <tbody id="partsTableBody"><tr><td colspan="7" class="empty-state">Loading…</td></tr></tbody>
           </table>
           </div>
         </div>

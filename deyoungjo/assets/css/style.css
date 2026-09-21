@@ -1,27 +1,32 @@
 /* =========================================================
-   DE YOUNG JO MOTORS — Design System
-   Concept: the diagonal cut of the DYJ logomark becomes the
-   site's one recurring structural motif — clipped corners on
-   panels, cards and buttons. Ink + gold, cream reserved for
-   content sections only (never the hero), so the palette never
-   settles into the cream/serif/terracotta template look.
+   DE YOUNG JO MOTORS design system
+   Concept: the diagonal cut of the DYJ logomark is the site's
+   recurring structural motif, clipped corners on panels, cards
+   and buttons. Dark is the default canvas now (deeper contrast,
+   more of a premium showroom feel); cream/paper are reserved for
+   deliberate "light band" sections and card surfaces, so light
+   and dark read as an intentional rhythm rather than one flat
+   background repeated on every page.
    ========================================================= */
 
 :root{
-  --ink:        #14120F;   /* near-black, warm not blue */
+  --ink:        #14120F;   /* deepest tone: nav, footer, emphasis bands */
   --ink-soft:   #211D17;
-  --gold:       #A87322;   /* deepened, richer metallic gold — less lemon, more brass */
+  --bg:         #1B170F;   /* default page/section background, one step up from --ink */
+  --bg-alt:     #201A10;   /* a second dark tone so not every page shares the exact canvas */
+  --gold:       #A87322;   /* deepened, richer metallic gold, less lemon, more brass */
   --gold-light: #D8A94F;
   --gold-dim:   #7A5620;
-  --cream:      #EBDFC4;   /* thick, warm cream — visibly a colour, not off-white */
-  --paper:      #F6EFDD;   /* card surface — lifted a touch above --cream for real separation */
-  --steel:      #3E3A2E;   /* secondary text on light — darkened for AA contrast on thicker cream */
-  --steel-light:#C9C0A4;   /* secondary text on dark */
-  --line:       #D8C69A;   /* hairline on light — stronger for definition against thicker cream */
+  --cream:      #EBDFC4;   /* light-band background, option A */
+  --paper:      #F6EFDD;   /* light-band background + card surface, option B */
+  --steel:      #3E3A2E;   /* body text on light backgrounds */
+  --steel-light:#C9C0A4;   /* secondary/muted text on dark backgrounds */
+  --text-dark-bg: #ECE3CC; /* primary body text on dark backgrounds */
+  --line:       #D8C69A;   /* hairline on light */
   --line-dark:  #37322A;   /* hairline on dark */
   --danger:     #A8402D;
   --success:    #3E6B4F;
-  --card-shadow: 0 1px 3px rgba(20,18,15,.07), 0 10px 24px rgba(20,18,15,.07);
+  --card-shadow: 0 1px 3px rgba(0,0,0,.22), 0 12px 28px rgba(0,0,0,.28);
 
   --font-display: 'Fraunces', 'Bricolage Grotesque', serif;
   --font-head: 'Bricolage Grotesque', system-ui, sans-serif;
@@ -40,8 +45,8 @@ html{scroll-behavior:smooth;}
 body{
   margin:0;
   font-family:var(--font-body);
-  color:var(--ink);
-  background:var(--cream);
+  color:var(--text-dark-bg);
+  background:var(--bg);
   -webkit-font-smoothing:antialiased;
   line-height:1.55;
 }
@@ -53,13 +58,14 @@ h1,h2,h3,h4{
   line-height:1.08;
   font-weight:600;
   letter-spacing:-0.01em;
+  color:#fff;
 }
 h1{font-weight:700;}
 h1, .hero h1, .section-head h2, .page-head h1{
   font-family:var(--font-display);
   font-optical-sizing:auto;
 }
-p{margin:0 0 1em;color:var(--steel);}
+p{margin:0 0 1em;color:var(--steel-light);}
 ul{padding:0;margin:0;list-style:none;}
 button{font-family:inherit;cursor:pointer;}
 input,textarea,select{font-family:inherit;font-size:1rem;}
@@ -67,9 +73,46 @@ input,textarea,select{font-family:inherit;font-size:1rem;}
 .container{max-width:var(--maxw);margin:0 auto;padding:0 var(--gutter);}
 .section{padding:88px 0;}
 .section-tight{padding:56px 0;}
-.on-ink{background:var(--ink);color:#fff;}
-.on-ink p{color:var(--steel-light);}
+
+/* "Light band" sections: the deliberate contrast break. Two options
+   (paper/cream) so pages can alternate between them instead of always
+   reaching for the same one. */
+.on-paper,.on-cream{color:var(--steel);}
+.on-paper h1,.on-paper h2,.on-paper h3,.on-paper h4,
+.on-cream h1,.on-cream h2,.on-cream h3,.on-cream h4{color:var(--ink);}
+.on-paper p,.on-cream p{color:var(--steel);}
 .on-paper{background:var(--paper);}
+.on-cream{background:var(--cream);}
+
+/* Deepest tone: for the rare section that should sit darker than the
+   page's own default background (final CTAs, standout banners). */
+.on-ink{background:var(--ink);color:var(--text-dark-bg);}
+.on-ink h1,.on-ink h2,.on-ink h3,.on-ink h4{color:#fff;}
+.on-ink p{color:var(--steel-light);}
+
+/* A second, slightly warmer dark tone some pages use instead of the
+   site-wide default, so not every page reads as the exact same canvas. */
+.on-bg-alt{background:var(--bg-alt);}
+
+/* Every light-surface component (a card, popup, or panel that keeps its
+   own paper/cream background no matter which section it sits in) resets
+   its own text colour here. Without this, a light card dropped into a
+   dark section would inherit that section's light-on-dark text and
+   become unreadable against its own light background. */
+.car-card,.feature-card,.office-card,.info-box,.testi-card,
+.compare-col.them,.dyj-popup,.cart-drawer,.rc-badge{
+  color:var(--steel);
+}
+.car-card h1,.car-card h2,.car-card h3,.car-card h4,
+.feature-card h1,.feature-card h2,.feature-card h3,.feature-card h4,
+.office-card h1,.office-card h2,.office-card h3,.office-card h4,
+.info-box h1,.info-box h2,.info-box h3,.info-box h4,
+.testi-card h1,.testi-card h2,.testi-card h3,.testi-card h4,
+.compare-col.them h1,.compare-col.them h2,.compare-col.them h3,.compare-col.them h4,
+.dyj-popup h1,.dyj-popup h2,.dyj-popup h3,.dyj-popup h4,
+.cart-drawer h1,.cart-drawer h2,.cart-drawer h3,.cart-drawer h4{
+  color:var(--ink);
+}
 
 /* ---------- Diagonal-cut motif ---------- */
 .cut-tr{ clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%); }
@@ -114,9 +157,9 @@ input,textarea,select{font-family:inherit;font-size:1rem;}
 }
 .nav-logo{display:flex;align-items:center;gap:10px;}
 .nav-logo img{height:40px;width:auto;}
-.nav-links{display:flex;align-items:center;gap:20px;}
+.nav-links{display:flex;align-items:center;gap:15px;}
 .nav-links a{
-  color:#EFE9DA;font-size:.88rem;font-weight:500;
+  color:#EFE9DA;font-size:.82rem;font-weight:500;
   position:relative;padding:4px 0;white-space:nowrap;
 }
 .nav-links a::after{
@@ -129,7 +172,7 @@ input,textarea,select{font-family:inherit;font-size:1rem;}
 .nav-burger{display:none;background:none;border:0;color:#fff;font-size:1.6rem;}
 .nav-mobile{display:none;flex-direction:column;gap:2px;background:var(--ink-soft);padding:10px var(--gutter) 18px;}
 .nav-mobile a{color:#EFE9DA;padding:10px 0;border-bottom:1px solid var(--line-dark);font-size:1rem;}
-@media (max-width:1080px){
+@media (max-width:1220px){
   .nav-links,.nav-cta .btn-outline{display:none;}
   .nav-burger{display:block;}
   .nav-mobile.open{display:flex;}
@@ -186,7 +229,7 @@ input,textarea,select{font-family:inherit;font-size:1rem;}
   overflow:hidden;transition:transform .2s ease, border-color .2s ease, box-shadow .2s ease;
   display:flex;flex-direction:column;
 }
-.car-card:hover{transform:translateY(-4px);border-color:var(--gold);box-shadow:0 14px 30px rgba(20,18,15,.1);}
+.car-card:hover{transform:translateY(-4px);border-color:var(--gold);box-shadow:0 16px 34px rgba(0,0,0,.35), 0 0 0 1px rgba(168,115,34,.25);}
 .car-card-media{position:relative;aspect-ratio:4/3;background:#ddd6c4;overflow:hidden;}
 .car-card-media img{width:100%;height:100%;object-fit:cover;}
 .car-tag{
@@ -216,11 +259,11 @@ input,textarea,select{font-family:inherit;font-size:1rem;}
 .feature-card h3{font-size:1.15rem;}
 
 /* ---------- Testimonials ---------- */
-.testi-card{background:var(--ink);color:#fff;padding:30px 26px;border:1px solid var(--line-dark);}
-.testi-card p{color:var(--steel-light);font-style:normal;}
+.testi-card{background:var(--paper);padding:30px 26px;border:1px solid var(--line);box-shadow:var(--card-shadow);}
+.testi-card p{color:var(--steel);font-style:normal;}
 .testi-name{display:flex;align-items:center;gap:12px;margin-top:16px;}
 .testi-avatar{width:40px;height:40px;border-radius:50%;background:var(--gold);color:var(--ink);display:flex;align-items:center;justify-content:center;font-weight:700;}
-.stars{color:var(--gold-light);letter-spacing:2px;margin-bottom:10px;display:block;}
+.stars{color:var(--gold);letter-spacing:2px;margin-bottom:10px;display:block;}
 
 /* ---------- Chips / filter bar ---------- */
 .filter-bar{
@@ -298,7 +341,7 @@ input,textarea,select{font-family:inherit;font-size:1rem;}
 @media (max-width:560px){.quick-search{grid-template-columns:1fr;}}
 
 /* ---------- Compare list (us vs. the old way) ---------- */
-.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);}
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;box-shadow:var(--card-shadow);}
 .compare-col{padding:30px 28px;}
 .compare-col.us{background:var(--ink);color:#fff;}
 .compare-col.us p{color:var(--steel-light);}
@@ -354,22 +397,22 @@ input,textarea,select{font-family:inherit;font-size:1rem;}
 .footer-address strong:first-child{margin-top:0;}
 
 /* ---------- Blog: modern editorial listing (no cards) ---------- */
-.blog-featured{display:grid;grid-template-columns:1.15fr 1fr;gap:44px;align-items:center;margin-bottom:60px;padding-bottom:50px;border-bottom:1px solid var(--line);}
+.blog-featured{display:grid;grid-template-columns:1.15fr 1fr;gap:44px;align-items:center;margin-bottom:60px;padding-bottom:50px;border-bottom:1px solid var(--line-dark);}
 .blog-featured img{width:100%;aspect-ratio:4/3;object-fit:cover;}
 .blog-featured h2{font-size:clamp(1.6rem,3vw,2.2rem);}
 .blog-featured .excerpt{font-size:1.05rem;}
 @media (max-width:820px){.blog-featured{grid-template-columns:1fr;gap:22px;}}
 
-.post-meta{font-size:.78rem;font-weight:700;letter-spacing:.03em;color:var(--gold-dim);text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
-.post-meta .sep{color:var(--line);font-weight:400;}
+.post-meta{font-size:.78rem;font-weight:700;letter-spacing:.03em;color:var(--gold-light);text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.post-meta .sep{color:var(--line-dark);font-weight:400;}
 
 .blog-list{display:flex;flex-direction:column;}
-.blog-row{display:grid;grid-template-columns:220px 1fr;gap:28px;padding:32px 0;border-bottom:1px solid var(--line);}
+.blog-row{display:grid;grid-template-columns:220px 1fr;gap:28px;padding:32px 0;border-bottom:1px solid var(--line-dark);}
 .blog-row img{width:220px;height:150px;object-fit:cover;flex-shrink:0;}
 .blog-row h3{font-family:var(--font-display);font-size:1.35rem;margin-bottom:8px;}
-.blog-row h3 a:hover{color:var(--gold-dim);}
+.blog-row h3 a:hover{color:var(--gold-light);}
 .blog-row p{margin-bottom:10px;}
-.blog-row .read-more{font-size:.86rem;font-weight:700;color:var(--gold-dim);}
+.blog-row .read-more{font-size:.86rem;font-weight:700;color:var(--gold-light);}
 @media (max-width:700px){.blog-row{grid-template-columns:1fr;}.blog-row img{width:100%;height:200px;}}
 
 .blog-cats{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:40px;}
@@ -378,11 +421,23 @@ input,textarea,select{font-family:inherit;font-size:1rem;}
 
 /* ---------- Blog post: readable long-form typography ---------- */
 .post-body{font-size:1.08rem;line-height:1.78;color:var(--ink);}
+.post-body::after{content:"";display:table;clear:both;}
 .post-body p{margin:0 0 1.4em;}
 .post-body h2,.post-body h3{font-family:var(--font-display);margin:1.6em 0 .6em;}
 .post-body blockquote{border-left:3px solid var(--gold);padding-left:22px;margin:1.8em 0;font-size:1.2rem;font-style:italic;color:var(--steel);}
 .post-body ul,.post-body ol{padding-left:1.4em;margin-bottom:1.4em;}
-.post-body img{margin:1.6em 0;width:100%;}
+/* Images inserted through the admin's editor carry their own inline width
+   (from dragging a resize handle) and sometimes a float (from its
+   left/centre/right placement tool). max-width just keeps whatever size
+   was chosen from ever overflowing a narrow screen; it doesn't fight the
+   inline width the way a flat "width:100%" would. */
+.post-body img{max-width:100%;height:auto;display:block;margin:1.6em auto;}
+.post-body img[style*="float: left"],.post-body img[style*="float:left"]{
+  margin:6px 24px 16px 0;display:inline-block;
+}
+.post-body img[style*="float: right"],.post-body img[style*="float:right"]{
+  margin:6px 0 16px 24px;display:inline-block;
+}
 .post-body a{color:var(--gold-dim);text-decoration:underline;}
 
 /* ---------- Comments (blog) & reviews (cars) ---------- */
@@ -477,8 +532,26 @@ input,textarea,select{font-family:inherit;font-size:1rem;}
 /* ---------- Car details ---------- */
 .spec-row{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line);font-size:.92rem;}
 .spec-row span{color:var(--steel);}
-.gallery-main{width:100%;aspect-ratio:16/10;object-fit:cover;background:#ddd6c4;}
-.gallery-thumbs{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+.gallery-main{width:100%;aspect-ratio:16/10;object-fit:cover;background:#ddd6c4;display:block;}
+.gallery-wrap{position:relative;overflow:hidden;}
+.gallery-arrow{
+  position:absolute;top:50%;transform:translateY(-50%);z-index:3;
+  width:42px;height:42px;border-radius:50%;border:0;cursor:pointer;
+  background:rgba(20,18,15,.55);color:#fff;font-size:1rem;
+  display:flex;align-items:center;justify-content:center;transition:background .15s ease;
+}
+.gallery-arrow:hover{background:rgba(20,18,15,.85);}
+.gallery-arrow.prev{left:14px;}
+.gallery-arrow.next{right:14px;}
+.gallery-count{
+  position:absolute;top:14px;right:14px;z-index:3;background:rgba(20,18,15,.6);color:#fff;
+  font-size:.78rem;font-weight:600;padding:4px 10px;
+}
+.gallery-dots{position:absolute;bottom:14px;left:0;right:0;z-index:3;display:flex;justify-content:center;gap:8px;}
+.gallery-dots button{
+  width:9px;height:9px;border-radius:50%;border:0;background:rgba(255,255,255,.55);cursor:pointer;padding:0;
+}
+.gallery-dots button.active{background:var(--gold);}
 .details-actions{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap;}
 .status-banner{background:#F4E1DC;color:var(--danger);border:1px solid #e2b7ab;padding:12px 16px;margin-bottom:20px;font-size:.9rem;}
 
@@ -502,7 +575,12 @@ input,textarea,select{font-family:inherit;font-size:1rem;}
 }
 
 /* ---------- Utility ---------- */
-.muted{color:var(--steel);}
+.muted{color:var(--steel-light);}
+.on-paper .muted,.on-cream .muted,
+.car-card .muted,.feature-card .muted,.office-card .muted,.info-box .muted,
+.testi-card .muted,.compare-col.them .muted,.dyj-popup .muted,.cart-drawer .muted{
+  color:var(--steel);
+}
 .tac{text-align:center;}
 .mt-0{margin-top:0;}
 .badge{display:inline-block;background:var(--gold);color:var(--ink);font-weight:700;font-size:.72rem;padding:4px 10px;}
