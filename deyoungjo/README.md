@@ -478,6 +478,34 @@ createdAt: timestamp
   `.doc` format aren't supported, Word can save any document as `.docx`
   first if needed.
 
+## 11i. Large documents, tables, and the blog going back to white
+
+- **The real cause of large imports failing**: every blog post's full
+  HTML used to live directly inside its Firestore document, and
+  Firestore caps a single document at 1 MiB. A long import, especially
+  one with a lot of formatting or several tables, could push right past
+  that, and the save would fail outright, which is what "breaks and
+  can't show" was. The full article body now lives in Firebase Storage
+  instead (one small HTML file per post), with only a link to it kept
+  in Firestore. There's no practical size ceiling on that, so a large
+  document now saves and displays the same way a short one does. Posts
+  saved before this update keep working exactly as they were, nothing
+  needed to migrate.
+- **Tables now survive both import and manual insertion.** The previous
+  gap: Quill has no built-in idea of what a `<table>` is, so one coming
+  in from a Word import (or pasted in directly) was quietly discarded
+  the moment the editor reconciled the page. Tables are now registered
+  as a format Quill preserves as a single unit, so they come through
+  from `.docx` imports intact, and there's also a **Table** button on
+  the toolbar (next to the image button) for building one from scratch,
+  it asks for a row and column count and drops in a plain table you can
+  click straight into and start typing.
+- **The blog is white again**, both the admin's article editor and the
+  published listing and article pages, matching what you asked for.
+  Text colour, links, table borders and everything else in that area
+  were all switched back to sit correctly on a light background rather
+  than the black one from the last update.
+
 ## 12. Data model reference (Firestore)
 
 **cars**
@@ -495,7 +523,10 @@ createdAt: timestamp
 
 **blogPosts**
 ```
-title, slug, category, coverImage, excerpt, content (HTML string)
+title, slug, category, coverImage, excerpt
+contentUrl: string (the article's full HTML, stored in Firebase Storage;
+            older posts may instead have an inline "content" HTML string)
+readingTimeMinutes: number
 published: boolean
 createdAt: timestamp
 ```

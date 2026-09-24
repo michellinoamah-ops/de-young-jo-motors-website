@@ -627,6 +627,7 @@ function openPartModal(part) {
    BLOG
 ===================================================================== */
 let quillExtrasRegistered = false;
+let QuillDelta = null;
 function registerQuillExtras() {
   if (quillExtrasRegistered || typeof Quill === "undefined") return;
   quillExtrasRegistered = true;
@@ -653,9 +654,44 @@ function registerQuillExtras() {
   const AlignStyle = Quill.import("attributors/style/align");
   Quill.register(AlignStyle, true);
 
+  // A table isn't a format core Quill understands, so without this, any
+  // <table> in imported or loaded HTML gets silently dropped the moment
+  // Quill reconciles the DOM back into its own model. Registering it as
+  // a block embed treats a whole table as one atomic unit: Quill leaves
+  // its inner HTML alone rather than trying (and failing) to represent
+  // it as regular text formatting. contenteditable is left on so cell
+  // text can still be edited directly by clicking into it.
+  const BlockEmbed = Quill.import("blots/block/embed");
+  class TableEmbed extends BlockEmbed {
+    static create(value) {
+      const node = super.create();
+      node.innerHTML = value;
+      node.setAttribute("contenteditable", "true");
+      return node;
+    }
+    static value(node) {
+      return node.innerHTML;
+    }
+  }
+  TableEmbed.blotName = "tableEmbed";
+  TableEmbed.tagName = "div";
+  TableEmbed.className = "ql-table-embed";
+  Quill.register(TableEmbed, true);
+  QuillDelta = Quill.import("delta");
+
   if (window.ImageResize) {
     Quill.register("modules/imageResize", window.ImageResize.default || window.ImageResize);
   }
+}
+
+/** Loads arbitrary HTML (from a saved post, or an imported document)
+ *  into a Quill instance through its clipboard converter rather than a
+ *  raw innerHTML assignment, so registered matchers (like the table one
+ *  set up per-instance below) get a chance to run and tables survive
+ *  the round trip instead of being quietly stripped out. */
+function setQuillHTML(quill, html) {
+  const delta = quill.clipboard.convert({ html: html || "" });
+  quill.setContents(delta, "silent");
 }
 
 function postFormHTML(post = {}) {
@@ -722,13 +758,15 @@ function postFormHTML(post = {}) {
             <button class="ql-list" value="ordered"></button><button class="ql-list" value="bullet"></button><button class="ql-blockquote"></button>
           </span>
           <span class="ql-formats">
-            <button class="ql-link"></button><button class="ql-image"></button><button class="ql-clean"></button>
+            <button class="ql-link"></button><button class="ql-image"></button>
+            <button type="button" id="qlInsertTableBtn" title="Insert table">Table</button>
+            <button class="ql-clean"></button>
           </span>
         </div>
         <div id="postQuillEditor"></div>
         <textarea name="content" id="postContentHidden" style="display:none;">${post.content||''}</textarea>
         <p class="form-note">Click an image after inserting it to drag-resize it from its corners, and use its small floating toolbar to place it left, right, or centre with text wrapping around it.</p>
-        <p class="form-note">The published article page has a black background, and this editor matches it. If you use the text colour tool, pick a light colour, a dark one will disappear against the black page even though it may look fine here if you mix up foreground and background.</p>
+        <p class="form-note">The published article page has a white background, and this editor matches it. If you use the text colour tool, pick a dark colour, a light or white one will disappear against the white page even though it may look fine here if you mix up foreground and background.</p>
       </div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
         <label class="switch"><input type="checkbox" name="published" ${post.published!==false?"checked":""}><span class="slider"></span></label>
@@ -792,6 +830,49 @@ function openPostModal(post) {
     placeholder: "Write the article here…",
   });
   quill.root.innerHTML = hiddenContent.value || "";
+
+  // Tables need their own clipboard matcher (per Quill instance) so
+  // pasted or loaded HTML containing a <table> turns into the embed
+  // registered above instead of being parsed as plain paragraphs (and
+  // losing its structure) or dropped entirely.
+  quill.clipboard.addMatcher("table", (node) => {
+    return new QuillDelta().insert({ tableEmbed: node.outerHTML });
+  });
+
+  // Load the post's actual content now that the matcher above is ready.
+  // New posts keep their full HTML in Storage (see the submit handler
+  // further down) rather than inline in Firestore, so it has to be
+  // fetched; older posts still carry it directly in the "content" field
+  // and are used as-is.
+  (async () => {
+    let html = post && post.content ? post.content : "";
+    if (post && post.contentUrl) {
+      try {
+        const res = await fetch(post.contentUrl);
+        html = await res.text();
+      } catch (err) {
+        console.error(err);
+        toast("Couldn't load this post's full content, it may still be there, try reopening it.");
+      }
+    }
+    setQuillHTML(quill, html);
+    hiddenContent.value = quill.root.innerHTML;
+  })();
+
+  // Manual table insertion: prompts for a size, then drops in a plain
+  // table the admin can click straight into and type.
+  $("#qlInsertTableBtn", overlay).addEventListener("click", () => {
+    const rows = Math.max(1, parseInt(prompt("How many rows?", "3"), 10) || 3);
+    const cols = Math.max(1, parseInt(prompt("How many columns?", "3"), 10) || 3);
+    let html = "<table>";
+    for (let r = 0; r < rows; r++) {
+      html += "<tr>" + "<td>&nbsp;</td>".repeat(cols) + "</tr>";
+    }
+    html += "</table>";
+    const range = quill.getSelection(true) || { index: quill.getLength() };
+    quill.insertEmbed(range.index, "tableEmbed", html, "user");
+    quill.setSelection(range.index + 1);
+  });
 
   // Images inserted INTO the article body: crop first, then upload to
   // Storage and insert the resulting URL. Uploading rather than embedding
@@ -857,7 +938,7 @@ function openPostModal(post) {
           })
         ),
       });
-      quill.root.innerHTML = result.value;
+      setQuillHTML(quill, result.value);
       hiddenContent.value = quill.root.innerHTML;
 
       // Nice-to-have: suggest an excerpt from the first bit of imported
@@ -890,10 +971,13 @@ function openPostModal(post) {
     try {
       const fd = new FormData(form);
       const title = fd.get("title");
+      const contentHtml = hiddenContent.value || "";
+      const plainWords = quill.getText().trim().split(/\s+/).filter(Boolean).length;
       const payload = {
         title, slug: slugify(fd.get("slug") || title),
         category: fd.get("category"), excerpt: fd.get("excerpt"),
-        content: fd.get("content"), published: fd.get("published") === "on",
+        published: fd.get("published") === "on",
+        readingTimeMinutes: Math.max(1, Math.round(plainWords / 200)),
         createdAt: dateInputToTimestamp(fd.get("publishDate")),
       };
       let id = post && post.id;
@@ -901,6 +985,17 @@ function openPostModal(post) {
         const docRef = await addDoc(collection(db, "blogPosts"), payload);
         id = docRef.id;
       }
+
+      // The full article HTML goes to Storage, not into this Firestore
+      // document: a long post, or one with several imported images and
+      // a table or two, can comfortably exceed Firestore's 1 MiB
+      // per-document limit if stored inline, which is exactly what made
+      // large imported documents fail to save at all.
+      const contentBlob = new Blob([contentHtml], { type: "text/html" });
+      const contentRef = ref(storage, `blogContentFiles/${id}-${Date.now()}.html`);
+      await uploadBytes(contentRef, contentBlob);
+      payload.contentUrl = await getDownloadURL(contentRef);
+
       const file = form.querySelector('input[name=cover]').files[0];
       if (file) {
         const [url] = await uploadFiles([file], `blog/${id}`);

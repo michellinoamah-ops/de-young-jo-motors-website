@@ -1,8 +1,12 @@
 // =====================================================================
 // DE YOUNG JO MOTORS: blog rendering (editorial listing, not cards)
 // Firestore collection: "blogPosts"
-// Fields: title, slug, category, coverImage, excerpt, content (html),
-//         published (bool), createdAt
+// Fields: title, slug, category, coverImage, excerpt, published (bool),
+//         createdAt, readingTimeMinutes, contentUrl (the full article
+//         HTML lives in Storage, not inline, so a long or image-heavy
+//         post never runs into Firestore's 1 MiB per-document limit).
+//         Older posts may still carry an inline "content" field instead
+//         of contentUrl; both are handled here.
 // Comments live in a separate collection: "blogComments"
 // Fields: postId (the post's slug), name, message, status
 //         ("pending"|"approved"|"rejected"), createdAt
@@ -27,6 +31,20 @@ function readingTime(html) {
   return Math.max(1, Math.round(words / 200));
 }
 
+/** Prefers the reading time computed and stored at save-time; falls
+ *  back to estimating from an inline "content" field for older posts
+ *  that predate that field, avoiding a content fetch just for a list. */
+function getReadingTime(p) {
+  if (p.readingTimeMinutes) return p.readingTimeMinutes;
+  if (p.content) return readingTime(p.content);
+  return null;
+}
+
+function metaLine(p) {
+  const rt = getReadingTime(p);
+  return `${p.category || "News"}<span class="sep">&middot;</span>${fmtDate(p.createdAt)}${rt ? `<span class="sep">&middot;</span>${rt} min read` : ""}`;
+}
+
 function featuredHTML(p) {
   return `
     <article class="blog-featured">
@@ -34,7 +52,7 @@ function featuredHTML(p) {
         <img src="${p.coverImage || PLACEHOLDER}" alt="${p.title}" loading="lazy">
       </a>
       <div>
-        <div class="post-meta">${p.category || "News"}<span class="sep">&middot;</span>${fmtDate(p.createdAt)}<span class="sep">&middot;</span>${readingTime(p.content)} min read</div>
+        <div class="post-meta">${metaLine(p)}</div>
         <h2><a href="blog-post.html?slug=${encodeURIComponent(p.slug)}">${p.title}</a></h2>
         <p class="excerpt muted">${p.excerpt || ""}</p>
         <a class="btn btn-ink" href="blog-post.html?slug=${encodeURIComponent(p.slug)}">Read article</a>
@@ -49,7 +67,7 @@ function rowHTML(p) {
         <img src="${p.coverImage || PLACEHOLDER}" alt="${p.title}" loading="lazy">
       </a>
       <div>
-        <div class="post-meta">${p.category || "News"}<span class="sep">&middot;</span>${fmtDate(p.createdAt)}<span class="sep">&middot;</span>${readingTime(p.content)} min read</div>
+        <div class="post-meta">${metaLine(p)}</div>
         <h3><a href="blog-post.html?slug=${encodeURIComponent(p.slug)}">${p.title}</a></h3>
         <p class="muted">${p.excerpt || ""}</p>
         <a class="read-more" href="blog-post.html?slug=${encodeURIComponent(p.slug)}">Read article &rarr;</a>
@@ -93,6 +111,22 @@ export async function loadPostBySlug(slug) {
   let post = null;
   snap.forEach(d => post = { id: d.id, ...d.data() });
   return post;
+}
+
+/** The full article body. Fetched from Storage for posts saved after
+ *  the large-document fix (contentUrl); read straight off the doc for
+ *  older posts that still carry it inline. */
+export async function loadPostContent(post) {
+  if (!post) return "";
+  if (post.contentUrl) {
+    try {
+      const res = await fetch(post.contentUrl);
+      if (res.ok) return await res.text();
+    } catch (e) {
+      console.error("Couldn't load article content:", e);
+    }
+  }
+  return post.content || "";
 }
 
 /* ---------------- Comments ---------------- */

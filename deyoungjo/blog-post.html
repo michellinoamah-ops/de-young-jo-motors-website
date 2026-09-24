@@ -68,7 +68,7 @@
     <div class="post-meta" id="postMeta" style="color:var(--steel-light);"></div>
   </div>
 </div>
-<section class="section on-ink" id="postRoot">
+<section class="section on-white" id="postRoot">
   <div class="container" style="max-width:800px;">
     <img id="postCover" src="" alt="" style="width:100%;margin-bottom:30px;" class="cut-tr">
     <div id="postContent" class="post-body"></div>
@@ -87,7 +87,7 @@
   </div>
 </div>
 
-<section class="section on-ink" id="commentsSection">
+<section class="section on-white" id="commentsSection">
   <div class="container" style="max-width:800px;">
     <h2 style="font-size:1.4rem;">Comments</h2>
     <div id="commentsList" style="margin-bottom:30px;"></div>
@@ -103,7 +103,7 @@
   </div>
 </section>
 
-<section class="section on-ink" style="max-width:900px;margin:0 auto;">
+<section class="section on-white" style="max-width:900px;margin:0 auto;">
   <div class="container">
     <h2 style="font-size:1.4rem;margin-bottom:20px;">More from the blog</h2>
     <div id="morePosts" data-compact="true"></div>
@@ -168,7 +168,7 @@
 <script type="module" src="assets/js/firebase-config.js"></script>
 <script type="module" src="assets/js/main.js"></script>
 <script type="module">
-  import { loadPostBySlug, loadPosts, loadComments, wireCommentForm, fmtDate, readingTime } from "./assets/js/blog.js";
+  import { loadPostBySlug, loadPostContent, loadPosts, loadComments, wireCommentForm, fmtDate } from "./assets/js/blog.js";
   import { waLink } from "./assets/js/firebase-config.js";
   const slug = new URLSearchParams(location.search).get("slug");
   (async () => {
@@ -185,9 +185,12 @@
     if (md) md.setAttribute("content", (post.excerpt || post.title).slice(0,150));
     document.getElementById("crumbPost").textContent = post.title;
     document.getElementById("postTitle").textContent = post.title;
-    document.getElementById("postMeta").innerHTML = `${post.category || "News"}<span class="sep">&middot;</span>${fmtDate(post.createdAt)}<span class="sep">&middot;</span>${readingTime(post.content)} min read`;
     document.getElementById("postCover").src = post.coverImage || "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?q=80&w=900&auto=format&fit=crop";
-    document.getElementById("postContent").innerHTML = post.content || `<p>${post.excerpt || ""}</p>`;
+    document.getElementById("postContent").innerHTML = `<p class="muted">Loading article&hellip;</p>`;
+    const contentHtml = await loadPostContent(post);
+    document.getElementById("postContent").innerHTML = contentHtml || `<p>${post.excerpt || ""}</p>`;
+    const rt = post.readingTimeMinutes || Math.max(1, Math.round((document.getElementById("postContent").textContent||"").trim().split(/\s+/).filter(Boolean).length / 200));
+    document.getElementById("postMeta").innerHTML = `${post.category || "News"}<span class="sep">&middot;</span>${fmtDate(post.createdAt)}<span class="sep">&middot;</span>${rt} min read`;
     const wa = document.getElementById("shareWa");
     wa.href = waLink(`I found this article on De Young Jo Motors worth reading: "${post.title}". ${location.href}`);
     loadPosts("morePosts", 3);

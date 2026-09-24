@@ -111,20 +111,26 @@
 
 /* ---------------- Quill rich text editor (blog post content) ---------------- */
 #postQuillToolbar{border:1px solid var(--line);border-bottom:0;background:#fff;}
-/* The live blog page has a black background (see style.css), so the
+/* The live blog page has a white background (see style.css), so the
    editing surface matches it here. This matters beyond looks: if the
    admin never touches the colour picker, Quill saves NO inline colour
    at all, and that text will inherit whatever colour the page it lands
-   on uses. Editing on a white surface made default (black) text look
-   fine while writing, then invisible once published on a black page.
-   Editing on black, with light default text, means what's on screen
-   while writing is what actually publishes. */
-#postQuillEditor{min-height:260px;max-height:460px;overflow-y:auto;background:var(--ink);font-family:var(--font-body);font-size:.98rem;}
-#postQuillEditor .ql-editor{min-height:260px;color:var(--text-dark-bg);}
-#postQuillEditor .ql-editor.ql-blank::before{color:var(--steel-light);font-style:normal;}
-#postQuillEditor .ql-editor h1,#postQuillEditor .ql-editor h2,#postQuillEditor .ql-editor h3{color:#fff;}
-#postQuillEditor .ql-editor a{color:var(--gold-light);}
-#postQuillEditor .ql-editor blockquote{border-left:3px solid var(--gold);color:var(--steel-light);}
+   on uses. Keeping the two in sync means what's on screen while
+   writing is what actually publishes. */
+#postQuillEditor{min-height:260px;max-height:460px;overflow-y:auto;background:#fff;font-family:var(--font-body);font-size:.98rem;border:1px solid var(--line);}
+#postQuillEditor .ql-editor{min-height:260px;color:var(--ink);}
+#postQuillEditor .ql-editor.ql-blank::before{color:var(--steel);font-style:normal;}
+#postQuillEditor .ql-editor h1,#postQuillEditor .ql-editor h2,#postQuillEditor .ql-editor h3{color:var(--ink);}
+#postQuillEditor .ql-editor a{color:var(--gold-dim);}
+#postQuillEditor .ql-editor blockquote{border-left:3px solid var(--gold);color:var(--steel);}
+#qlInsertTableBtn{
+  width:auto !important;padding:0 8px;font-size:.78rem;font-weight:700;color:#444;
+  border:1px solid #ccc;border-radius:3px;background:#fff;vertical-align:middle;
+}
+#qlInsertTableBtn:hover{background:#f0f0f0;}
+.ql-table-embed{margin:1em 0;overflow-x:auto;}
+.ql-table-embed table{width:100%;border-collapse:collapse;}
+.ql-table-embed td{border:1px solid var(--line);padding:8px 10px;min-width:60px;}
 
 /* Custom font whitelist needs its own labels; Quill's default CSS only
    knows how to label its built-in sans-serif/serif/monospace options. */
